@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>生日快乐 - 沛沛</title>
+    <title>陈老师亲启</title>
     <style>
         body { 
             margin: 0; 
@@ -115,11 +115,12 @@
             text-align: center;
             line-height: 1.8;
             transition: opacity 0.5s;
-            background: rgba(0,0,0,0.85);
-            padding: 30px;
+            background: rgba(0,0,0,0.9);
+            padding: 40px;
             border-radius: 15px;
             border: 1px solid #d4af37;
-            box-shadow: 0 0 30px rgba(0,0,0,0.8);
+            box-shadow: 0 0 50px rgba(0,0,0,0.8);
+            width: 300px;
         }
 
         #gesture-icon {
@@ -148,11 +149,13 @@
 <body>
 
 <div class="loader" id="loader">
-    <div style="font-size: 20px; font-weight: bold; margin-bottom: 15px; color: #fff;">✦ 生日惊喜准备中 ✦</div>
-    <div id="loading-text">正在编织粒子星空...</div>
-    <div style="font-size:12px; opacity: 0.6; color: #ccc; margin-top: 20px;">
-        提示：请允许摄像头权限以进行互动<br>
-        (数据仅在本地处理，不会上传)
+    <div style="font-size: 24px; font-weight: bold; margin-bottom: 20px; color: #d4af37; text-transform: uppercase; letter-spacing: 2px;">✦ 陈老师亲启 ✦</div>
+    <div id="loading-text" style="font-size: 16px; margin-bottom: 15px;">正在为您准备专属时空...</div>
+    <div style="font-size:13px; opacity: 0.8; color: #eee; line-height: 1.6; border-top: 1px solid rgba(255,255,255,0.2); padding-top: 15px; width: 100%; text-align: left;">
+        <strong>温馨提醒：</strong><br>
+        1. 本体验包含互动环节，请允许<strong>摄像头权限</strong>。<br>
+        2. 请按照屏幕下方的文字指引进行操作。<br>
+        3. 请保持环境光线充足，尽情享用。
     </div>
 </div>
 
@@ -263,7 +266,7 @@
         
         // 预生成所有文字形状
         setTimeout(() => {
-            document.getElementById('loading-text').innerText = "正在生成 3D 文字...";
+            document.getElementById('loading-text').innerText = "正在编织粒子星空...";
             
             generateTextShape("3", "3");
             generateTextShape("2", "2");
@@ -483,16 +486,23 @@
         let font = "bold 200px 'Microsoft YaHei', 'SimHei', sans-serif"; 
         
         if (['3','2','1'].includes(key)) {
-            scale = 2.5; zThick = 150; font = "bold 300px Arial";
+            scale = 3.0; zThick = 150; font = "bold 350px Arial";
         }
         else if (key.startsWith('MSG_')) {
-            scale = 1.6; zThick = 50; 
+            // 文案优化：缩小字号以防溢出，增大scale以保持视觉大小
+            scale = 2.8; zThick = 50; 
+            font = "bold 120px 'Microsoft YaHei', 'SimHei', sans-serif"; 
         }
         else if (key === 'HB') {
-            scale = 1.8; font = "bold 220px Arial";
+            scale = 2.0; font = "bold 200px Arial";
         }
         else if (key === 'LOVE') {
-            scale = 2.0; font = "bold 250px Arial";
+            scale = 2.2; font = "bold 220px Arial";
+        }
+        else if (key === 'FINAL') {
+             scale = 1.8; 
+             zThick = 120;
+             font = "bold 180px 'Microsoft YaHei', sans-serif"; 
         }
 
         const coords = getTextPixelData(text, font, scale, zThick, 0);
@@ -513,11 +523,9 @@
             
             if (i < total * heartP) {
                 // 立体爱心公式
-                // (x^2 + 9/4y^2 + z^2 - 1)^3 - x^2z^3 - 9/80y^2z^3 = 0 的参数化近似
                 const phi = Math.random() * Math.PI * 2;
                 const theta = Math.random() * Math.PI;
                 
-                // 使用简单的参数方程变体
                 const t = Math.random() * Math.PI * 2;
                 // 基本形状
                 let hx = 16 * Math.pow(Math.sin(t), 3);
@@ -532,12 +540,8 @@
 
                 r=1.0; g=0.1; b=0.3; // 红色
             } else {
-                // 箭 (穿过心脏，角度约 30度)
-                // 箭杆长约 800
-                const t = Math.random(); // 0 to 1 along arrow
-                const len = 900;
-                
-                // 旋转矩阵逻辑简化：直接定义起点终点
+                // 箭 (穿过心脏)
+                const t = Math.random(); 
                 // 从左上后 到 右下前
                 const p1 = {x: -400, y: 200, z: -100};
                 const p2 = {x: 400, y: -200, z: 100};
@@ -546,23 +550,21 @@
                 let ay = p1.y + (p2.y - p1.y) * t;
                 let az = p1.z + (p2.z - p1.z) * t;
                 
-                // 增加杆的粗细
                 const thickness = 5;
                 ax += (Math.random()-0.5) * thickness;
                 ay += (Math.random()-0.5) * thickness;
                 az += (Math.random()-0.5) * thickness;
                 
-                // 箭头 (在 t > 0.95)
+                // 箭头 
                 if (t > 0.95) {
                     const spread = (t - 0.95) * 300;
                     ay += (Math.random()-0.5) * spread;
                     az += (Math.random()-0.5) * spread;
                 }
                 
-                // 箭羽 (在 t < 0.15)
+                // 箭羽
                 if (t < 0.15) {
                     const spread = (0.15 - t) * 250;
-                    // 十字形羽毛
                     if (Math.random() > 0.5) {
                         ay += (Math.random()-0.5) * spread;
                     } else {
