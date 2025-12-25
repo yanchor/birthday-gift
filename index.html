@@ -198,14 +198,16 @@
 <div id="canvas-container"></div>
 <div class="debug-info" id="debug"></div>
 
-<!-- 🔴 关键修复：更换为 Staticfile CDN (国内极速) -->
+<!-- 依赖库加载 -->
+<!-- 1. Three.js & GSAP: 使用国内 Staticfile CDN (极速稳定) -->
 <script src="https://cdn.staticfile.org/three.js/r128/three.min.js"></script>
 <script src="https://cdn.staticfile.org/gsap/3.9.1/gsap.min.js"></script>
-<!-- MediaPipe 国内源 -->
-<script src="https://npm.elemecdn.com/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
-<script src="https://npm.elemecdn.com/@mediapipe/control_utils/control_utils.js" crossorigin="anonymous"></script>
-<script src="https://npm.elemecdn.com/@mediapipe/drawing_utils/drawing_utils.js" crossorigin="anonymous"></script>
-<script src="https://npm.elemecdn.com/@mediapipe/hands/hands.js" crossorigin="anonymous"></script>
+
+<!-- 2. MediaPipe: 尝试使用 jsDelivr (最通用)，不指定小版本号以避免404 -->
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/control_utils/control_utils.js" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js" crossorigin="anonymous"></script>
 
 <script type="x-shader/x-vertex" id="vertexshader">
     attribute float size;
@@ -236,9 +238,6 @@
 </script>
 
 <script>
-    /**
-     * CONFIG - 延迟初始化，防止报错
-     */
     let CONFIG; 
 
     const STATE = {
@@ -260,14 +259,16 @@
     let scene, camera, renderer, particles, geometry, material;
     
     async function init() {
-        // 🚨 检查库文件是否加载成功
-        if (typeof THREE === 'undefined' || typeof gsap === 'undefined') {
-            document.getElementById('loading-text').innerText = "核心组件加载失败，请检查网络或刷新页面";
-            document.getElementById('loading-text').style.color = "red";
+        // 故障检测：如果 JS 库加载失败，提示刷新
+        if (typeof THREE === 'undefined' || typeof gsap === 'undefined' || typeof Hands === 'undefined') {
+            const errText = document.getElementById('loading-text');
+            errText.innerText = "网络连接异常，AI组件加载失败";
+            errText.style.color = "#ff4444";
+            document.querySelector('.loader div:last-child').innerHTML = 
+                "<span style='color:white'>请检查网络，尝试<strong>刷新页面</strong></span>";
             return;
         }
 
-        // 初始化配置
         CONFIG = {
             particleCount: 35000, 
             colors: {
@@ -546,8 +547,8 @@
 
     function setupMediaPipe() {
         const videoElement = document.getElementById('input-video');
-        // 🔴 关键修改：使用国内 CDN 镜像
-        const hands = new Hands({locateFile: (file) => `https://npm.elemecdn.com/@mediapipe/hands/${file}`});
+        // 确保使用 jsdelivr，它是目前国内无 VPN 最稳妥的方案之一
+        const hands = new Hands({locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`});
         
         hands.setOptions({ maxNumHands: 2, modelComplexity: 1, minDetectionConfidence: 0.7, minTrackingConfidence: 0.7 });
         hands.onResults(onHandsResults);
