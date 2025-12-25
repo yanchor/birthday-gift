@@ -803,6 +803,7 @@
         // 动态冷却时间
         let cooldown = 2000;
         if (STATE.stage === 4) cooldown = 3000; // 那五句文案之间增加到 3 秒
+        if (STATE.stage === 8) cooldown = 4000; // 蛋糕许愿：防误触，强制等待4秒
         
         if (now - STATE.lastActionTime < cooldown) return; 
 
