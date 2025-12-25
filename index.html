@@ -163,7 +163,6 @@
 <body>
 
 <audio id="bgm" loop preload="auto">
-    <!-- 请确保同目录下有 River Flows in You.mp3 -->
     <source src="./River Flows in You.mp3" type="audio/mpeg">
 </audio>
 
@@ -199,9 +198,9 @@
 <div id="canvas-container"></div>
 <div class="debug-info" id="debug"></div>
 
-<!-- 🔴 关键修改：将所有 JS 库替换为国内饿了么 CDN 镜像 -->
-<script src="https://npm.elemecdn.com/three@0.128.0/build/three.min.js"></script>
-<script src="https://npm.elemecdn.com/gsap@3.9.1/dist/gsap.min.js"></script>
+<!-- 🔴 关键修复：更换为 Staticfile CDN (国内极速) -->
+<script src="https://cdn.staticfile.org/three.js/r128/three.min.js"></script>
+<script src="https://cdn.staticfile.org/gsap/3.9.1/gsap.min.js"></script>
 <!-- MediaPipe 国内源 -->
 <script src="https://npm.elemecdn.com/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
 <script src="https://npm.elemecdn.com/@mediapipe/control_utils/control_utils.js" crossorigin="anonymous"></script>
@@ -238,29 +237,9 @@
 
 <script>
     /**
-     * CONFIG
+     * CONFIG - 延迟初始化，防止报错
      */
-    const CONFIG = {
-        particleCount: 35000, 
-        colors: {
-            gold: new THREE.Color(0xffd700),
-            silver: new THREE.Color(0xffffff),
-            pink: new THREE.Color(0xff69b4),
-            blue: new THREE.Color(0x87ceeb),
-            red: new THREE.Color(0xff0000),
-            cakeBase: new THREE.Color(0xfffdd0), 
-            cakeChoco: new THREE.Color(0x8b4513), 
-            fire: new THREE.Color(0xff4500)       
-        },
-        swipeThreshold: 0.15,
-        messages: [
-            "陈老师，你好！",
-            "你就这么突然\n出现在我的人生里",
-            "认识你已经\n七七四十九天了",
-            "因为你的宽宏大量\n我活到了今天",
-            "接下来我想说..."
-        ]
-    };
+    let CONFIG; 
 
     const STATE = {
         stage: 0, 
@@ -281,6 +260,36 @@
     let scene, camera, renderer, particles, geometry, material;
     
     async function init() {
+        // 🚨 检查库文件是否加载成功
+        if (typeof THREE === 'undefined' || typeof gsap === 'undefined') {
+            document.getElementById('loading-text').innerText = "核心组件加载失败，请检查网络或刷新页面";
+            document.getElementById('loading-text').style.color = "red";
+            return;
+        }
+
+        // 初始化配置
+        CONFIG = {
+            particleCount: 35000, 
+            colors: {
+                gold: new THREE.Color(0xffd700),
+                silver: new THREE.Color(0xffffff),
+                pink: new THREE.Color(0xff69b4),
+                blue: new THREE.Color(0x87ceeb),
+                red: new THREE.Color(0xff0000),
+                cakeBase: new THREE.Color(0xfffdd0), 
+                cakeChoco: new THREE.Color(0x8b4513), 
+                fire: new THREE.Color(0xff4500)       
+            },
+            swipeThreshold: 0.15,
+            messages: [
+                "陈老师，你好！",
+                "你就这么突然\n出现在我的人生里",
+                "认识你已经\n七七四十九天了",
+                "因为你的宽宏大量\n我活到了今天",
+                "接下来我想说..."
+            ]
+        };
+
         setupThreeJS();
         setupMediaPipe();
         
@@ -709,30 +718,3 @@
 </script>
 </body>
 </html>
-```
-
-### 部署到 VPS 的步骤
-
-1.  **准备文件**：
-    * 在本地新建文件夹 `birthday_project`。
-    * 将上述代码保存为 `index.html`。
-    * 将下载的音乐文件命名为 `River Flows in You.mp3`（注意空格），放入同一文件夹。
-
-2.  **上传服务器**：
-    * 使用 SSH 连接到 VPS。
-    * 创建目录：`sudo mkdir -p /var/www/birthday`
-    * 使用 SFTP/FileZilla 将 `birthday_project` 内的两个文件上传到 `/var/www/birthday`。
-
-3.  **Nginx 配置 (如果已有 Nginx)**：
-    * 编辑配置：`sudo nano /etc/nginx/sites-available/birthday`
-    * 内容示例：
-        ```nginx
-        server {
-            listen 80;
-            server_name 你的域名.com;
-            root /var/www/birthday;
-            index index.html;
-            location / {
-                try_files $uri $uri/ =404;
-            }
-        }
