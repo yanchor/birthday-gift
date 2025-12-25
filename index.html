@@ -170,10 +170,12 @@
 </head>
 <body>
 
-<!-- 音乐播放器 (使用在线地址) -->
+<!-- 音乐播放器 -->
 <audio id="bgm" loop preload="auto">
-    <!-- 使用 Pixabay 的 "Warm Memories" 钢琴曲，免版税，可商用，链接稳定 -->
-    <source src="https://cdn.pixabay.com/audio/2022/01/18/audio_d216f8193c.mp3" type="audio/mpeg">
+    <!-- 1. 优先加载你下载的本地音乐文件 -->
+    <source src="./River Flows in You.mp3" type="audio/mpeg">
+    <!-- 2. 在线备用链接 -->
+    <source src="https://cdn.pixabay.com/audio/2022/03/15/audio_c8c8a73467.mp3" type="audio/mpeg">
 </audio>
 
 <div class="loader" id="loader">
@@ -202,7 +204,7 @@
 </div>
 
 <div id="ui-layer">
-    <button class="btn" onclick="toggleMusic()" id="music-btn">🎵 暂停</button>
+    <!-- 移除了暂停按钮，仅保留全屏 -->
     <button class="btn" onclick="toggleFullScreen()">⛶ 全屏</button>
 </div>
 
@@ -322,15 +324,11 @@
     function startExperience() {
         const loader = document.getElementById('loader');
         
-        // 尝试播放音乐 (Warm Memories - Piano)
+        // 尝试播放音乐 (本地 mp3)
         const bgm = document.getElementById('bgm');
         bgm.volume = 0.6; 
-        bgm.play().then(() => {
-            STATE.isMusicPlaying = true;
-            document.getElementById('music-btn').innerText = "🎵 暂停";
-        }).catch(e => {
+        bgm.play().catch(e => {
             console.log("Auto-play blocked, waiting for interaction.");
-            document.getElementById('music-btn').innerText = "🎵 播放";
         });
 
         loader.style.opacity = 0;
@@ -342,19 +340,7 @@
         }, 800);
     }
 
-    function toggleMusic() {
-        const bgm = document.getElementById('bgm');
-        const btn = document.getElementById('music-btn');
-        if (STATE.isMusicPlaying) {
-            bgm.pause();
-            btn.innerText = "🎵 播放";
-            STATE.isMusicPlaying = false;
-        } else {
-            bgm.play();
-            btn.innerText = "🎵 暂停";
-            STATE.isMusicPlaying = true;
-        }
-    }
+    // 移除了手动 toggleMusic 函数，因为按钮已经删除
 
     function setupThreeJS() {
         const container = document.getElementById('canvas-container');
@@ -906,7 +892,7 @@
                         showGestureIcon("➡");
                         updateSubStatus(`${STATE.messageIndex + 1} / ${CONFIG.messages.length}`);
                     } else {
-                        updateStatus("🎉 生日快乐！请比个心 ❤ (或等待自动播放)");
+                        updateStatus("🎉 生日快乐！请比个心 ❤");
                         updateSubStatus("");
                         morphTo(STATE.textParticles["HB"]);
                         STATE.stage = 5;
