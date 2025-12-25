@@ -21,7 +21,7 @@
             z-index: 1; 
             background: radial-gradient(circle at center, #1a1a1a 0%, #000 100%); 
         }
-        /* 摄像头画面 - 移至左上角，半透明，避免干扰视觉 */
+        /* 摄像头画面 */
         #video-wrapper { 
             position: absolute; 
             top: 20px; 
@@ -32,7 +32,7 @@
             box-shadow: 0 0 15px rgba(255, 215, 0, 0.1); 
             border: 1px solid rgba(255,255,255,0.1);
             transition: opacity 0.3s;
-            width: 120px; /*稍微改小一点*/
+            width: 120px;
             height: 90px;
             opacity: 0.3; 
         }
@@ -44,7 +44,7 @@
             transform: scaleX(-1); 
         }
         
-        /* 仅保留全屏按钮 */
+        /* UI 层 */
         #ui-layer { 
             position: absolute; 
             bottom: 30px; 
@@ -92,6 +92,8 @@
             transform: scale(1.05);
             color: #fff;
         }
+        
+        /* 加载与诊断面板 */
         .loader { 
             position: absolute; 
             top: 50%; 
@@ -103,9 +105,21 @@
             text-align: center;
             line-height: 1.8;
             transition: opacity 0.5s;
-            pointer-events: none;
-            text-shadow: 0 0 10px #d4af37;
+            background: rgba(0,0,0,0.8);
+            padding: 20px;
+            border-radius: 10px;
+            border: 1px solid #d4af37;
+            max-width: 80%;
         }
+        .log-item {
+            font-size: 12px;
+            text-align: left;
+            margin-top: 5px;
+            font-family: monospace;
+        }
+        .log-success { color: #4caf50; }
+        .log-error { color: #f44336; }
+
         #gesture-icon {
             position: absolute;
             top: 50%;
@@ -132,8 +146,9 @@
 <body>
 
 <div class="loader" id="loader">
-    ✦ 生日惊喜加载中 ✦<br>
-    <span style="font-size:12px; opacity: 0.7; color: #fff;">系统需调用摄像头以识别互动手势</span>
+    <div style="font-size: 18px; font-weight: bold; margin-bottom: 10px;">✦ 生日惊喜加载中 ✦</div>
+    <div id="loading-logs">正在初始化系统...</div>
+    <div style="font-size:12px; opacity: 0.7; color: #fff; margin-top: 15px;">如长时间卡住，请检查摄像头权限</div>
 </div>
 
 <div id="status-bar">
@@ -196,10 +211,9 @@
 <script>
     /**
      * >>>>>> 配置区域 <<<<<<
-     * 在这里替换你的照片链接
      */
     const CONFIG = {
-        particleCount: 40000, // 提升至4万粒子，保证清晰度
+        particleCount: 45000, // 再次提升粒子数，保证照片像LED屏一样清晰
         colors: {
             gold: new THREE.Color(0xffd700),
             silver: new THREE.Color(0xffffff),
@@ -210,11 +224,11 @@
             fire: new THREE.Color(0xff4500)       
         },
         swipeThreshold: 0.15,
-        // 这里已经替换为你本地的相对路径
+        // 图片列表：请确保文件名大小写与这里完全一致！
         defaultImages: [
-            './p1.jpg', 
-            './p2.jpg', 
-            './p3.jpg'
+            'p1.jpg', 
+            'p2.jpg', 
+            'p3.jpg'
         ]
     };
 
@@ -232,32 +246,64 @@
         flameParticles: [] 
     };
 
+    // Logger Utility
+    function log(msg, type = 'info') {
+        const box = document.getElementById('loading-logs');
+        const div = document.createElement('div');
+        div.className = 'log-item ' + (type === 'error' ? 'log-error' : (type === 'success' ? 'log-success' : ''));
+        div.innerText = msg;
+        box.appendChild(div);
+        console.log(`[${type.toUpperCase()}] ${msg}`);
+    }
+
     let scene, camera, renderer, particles, geometry, material;
     let particlePositions, particleColors, particleSizes, particleOpacities;
     
     async function init() {
+        log("开始加载资源...");
+        
+        // 并行加载图片
         await loadDefaultPhotos();
+        
+        log("初始化 3D 引擎...");
         setupThreeJS();
+        
+        log("初始化 AI 视觉模型 (可能需要几秒)...");
         setupMediaPipe();
         
+        // 预生成文字
         setTimeout(() => {
+            log("正在生成 3D 文字...");
             generateTextShape("3", "3");
             generateTextShape("2", "2");
             generateTextShape("1", "1");
             generateTextShape("Happy\nBirthday", "HB");
             generateTextShape("沛沛\n生日快乐！", "FINAL");
             
-            document.getElementById('loader').style.opacity = 0;
-            STATE.isLoaded = true;
-            updateStatus("请比出数字 '3' 开始倒计时");
-            resetParticlesToSphere();
-        }, 1500);
+            // 检查照片是否加载成功
+            if (STATE.photos.length === 0) {
+                log("❌ 警告：所有照片加载失败！相册模式将无法显示。", "error");
+                log("请检查文件名大小写是否匹配 (p1.jpg vs P1.JPG)", "error");
+                // 不隐藏 loader，让用户看到错误
+                document.getElementById('loader').innerHTML += '<br><button class="btn" onclick="document.getElementById(\'loader\').style.display=\'none\'">忽略错误强制开始</button>';
+            } else {
+                log("✅ 系统就绪！", "success");
+                setTimeout(() => {
+                    document.getElementById('loader').style.opacity = 0;
+                    setTimeout(() => { document.getElementById('loader').style.display = 'none'; }, 500);
+                }, 800);
+                
+                STATE.isLoaded = true;
+                updateStatus("请比出数字 '3' 开始倒计时");
+                resetParticlesToSphere();
+            }
+        }, 1000);
     }
 
     function setupThreeJS() {
         const container = document.getElementById('canvas-container');
         scene = new THREE.Scene();
-        scene.fog = new THREE.FogExp2(0x000000, 0.0003); // 降低雾气浓度，增加清晰度
+        scene.fog = new THREE.FogExp2(0x000000, 0.0003); 
 
         camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 1, 5000);
         camera.position.z = 800;
@@ -296,8 +342,8 @@
             particleColors[i * 3 + 2] = color.b;
 
             // 稍微调小一点基础粒子大小，让画面更细腻
-            particleSizes[i] = 8 + Math.random() * 12; 
-            particleOpacities[i] = 0.8 + Math.random() * 0.2; // 提高基础不透明度
+            particleSizes[i] = 8 + Math.random() * 10; 
+            particleOpacities[i] = 0.9 + Math.random() * 0.1; // 高不透明度
         }
 
         geometry.setAttribute('position', new THREE.BufferAttribute(particlePositions, 3));
@@ -473,13 +519,13 @@
         STATE.textParticles[key] = new Float32Array(coords);
     }
 
-    // 优化的照片生成逻辑：更清晰
+    // 优化的照片生成逻辑：超清晰版
     async function processImageToParticles(img) {
         const canvas = document.createElement('canvas');
         const ctx = canvas.getContext('2d');
         
-        // 增加解析度
-        const maxSize = 200; 
+        // 再次提升解析度，以适配4.5万粒子
+        const maxSize = 220; 
         let w = img.width;
         let h = img.height;
         if (w > h) { h = (h/w)*maxSize; w = maxSize; }
@@ -492,32 +538,30 @@
         const data = ctx.getImageData(0, 0, w, h).data;
         const positions = [];
         const colors = [];
-        const scale = 4.0; // 稍微调小scale让像素更紧凑
+        const scale = 4.0; 
 
         for (let y = 0; y < h; y += 1) {
             for (let x = 0; x < w; x += 1) {
                 const index = (y * w + x) * 4;
-                if (data[index + 3] > 128) { // 稍微提高Alpha阈值，去除边缘杂色
+                if (data[index + 3] > 128) { 
                     
-                    // X, Y 坐标
                     const px = (x - w/2) * scale * 1.5;
                     const py = -(y - h/2) * scale * 1.5;
                     
-                    // 颜色
                     const r = data[index] / 255;
                     const g = data[index+1] / 255;
                     const b = data[index+2] / 255;
 
-                    // 1. 基础粒子 (Z=0, 保证正面清晰)
+                    // 1. 基础平面层：绝对清晰
                     positions.push(px, py, 0);
                     colors.push(r, g, b);
 
-                    // 2. 随机填充粒子 (只在亮部增加，暗部保持干净)
-                    // 如果亮度够高，增加一个微小偏移的粒子，增加充实感
-                    const brightness = (r+g+b)/3;
-                    if (brightness > 0.3 && Math.random() > 0.5) {
-                         positions.push(px + (Math.random()-0.5)*2, py + (Math.random()-0.5)*2, (Math.random()-0.5)*5);
-                         colors.push(r, g, b);
+                    // 2. 增强填充：在同一点 Z轴微动，增加实感
+                    // 只有亮度高的点增加，避免黑色背景太厚
+                    const luma = 0.2126*r + 0.7152*g + 0.0722*b;
+                    if (luma > 0.2) {
+                        positions.push(px, py, (Math.random()-0.5)*3); 
+                        colors.push(r, g, b);
                     }
                 }
             }
@@ -676,17 +720,20 @@
         return Promise.all(CONFIG.defaultImages.map(src => {
             return new Promise((resolve) => {
                 const img = new Image();
-                img.crossOrigin = "Anonymous";
+                // 移除 crossOrigin，避免本地文件加载报错
+                // img.crossOrigin = "Anonymous"; 
                 img.src = src;
-                img.onload = () => resolve(img);
-                img.onerror = () => resolve(null); // Ignore errors
+                img.onload = () => {
+                    log(`加载成功: ${src}`, 'success');
+                    resolve(img);
+                };
+                img.onerror = () => {
+                    log(`加载失败: ${src} (请检查文件名大小写!)`, 'error');
+                    resolve(null);
+                };
             });
         })).then(images => {
-            // Filter out failed loads
             STATE.photos = images.filter(img => img !== null);
-            if (STATE.photos.length === 0) {
-                console.error("No images loaded. Please check URL CORS or validity.");
-            }
         });
     }
 
