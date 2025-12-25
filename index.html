@@ -49,6 +49,8 @@
             bottom: 30px; 
             right: 30px; 
             z-index: 10; 
+            display: flex;
+            gap: 10px;
         }
         
         #status-bar { 
@@ -96,6 +98,9 @@
             backdrop-filter: blur(10px); 
             letter-spacing: 1px; 
             font-weight: bold;
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
         .btn:hover { 
             background: rgba(212, 175, 55, 0.2); 
@@ -165,6 +170,12 @@
 </head>
 <body>
 
+<!-- 音乐播放器 (使用在线地址) -->
+<audio id="bgm" loop preload="auto">
+    <!-- 使用 Pixabay 的 "Warm Memories" 钢琴曲，免版税，可商用，链接稳定 -->
+    <source src="https://cdn.pixabay.com/audio/2022/01/18/audio_d216f8193c.mp3" type="audio/mpeg">
+</audio>
+
 <div class="loader" id="loader">
     <div style="font-size: 24px; font-weight: bold; margin-bottom: 20px; color: #d4af37; text-transform: uppercase; letter-spacing: 2px;">✦ 陈老师亲启 ✦</div>
     <div id="loading-text" style="font-size: 16px; margin-bottom: 15px;">正在为您准备专属时空...</div>
@@ -172,8 +183,8 @@
         <strong>温馨提醒：</strong><br>
         1. 本体验包含互动环节，请务必允许<strong>摄像头权限</strong>。<br>
         2. 建议调高屏幕亮度，保持环境光线充足。<br>
-        3. 请耐心按照屏幕下方的指引进行手势操作。<br>
-        4. 即使识别稍慢也不要急，深呼吸，慢慢来。<br>
+        3. <span style="color:#d4af37">背景音乐已备好，请开启声音或戴上耳机。</span><br>
+        4. 请耐心按照屏幕下方的指引进行手势操作。<br>
         5. 准备好开启这段旅程了吗？
     </div>
     <button id="start-btn" onclick="startExperience()">开启旅程</button>
@@ -191,9 +202,8 @@
 </div>
 
 <div id="ui-layer">
-    <button class="btn" onclick="toggleFullScreen()">
-        ⛶ 全屏沉浸
-    </button>
+    <button class="btn" onclick="toggleMusic()" id="music-btn">🎵 暂停</button>
+    <button class="btn" onclick="toggleFullScreen()">⛶ 全屏</button>
 </div>
 
 <div id="canvas-container"></div>
@@ -263,7 +273,7 @@
     };
 
     const STATE = {
-        stage: 0, // 0:Intro, 1-3:Count, 4:Messages, 5:HB, 6:ArrowHeart, 7:LoveYou, 8:Cake, 9:Final
+        stage: 0, 
         messageIndex: 0,
         textParticles: {},
         isLoaded: false,
@@ -274,8 +284,9 @@
         lastGesture: "",
         lastActionTime: 0,
         flameParticles: [],
-        cakeTimer: null, // 蛋糕超时计时器
-        arrowHeartTimer: null // 一箭穿心超时计时器
+        cakeTimer: null, 
+        arrowHeartTimer: null,
+        isMusicPlaying: false
     };
 
     let scene, camera, renderer, particles, geometry, material;
@@ -300,7 +311,6 @@
             generateTextShape("I LOVE\nYOU", "LOVE"); 
             generateTextShape("沛沛\n生日快乐！", "FINAL");
             
-            // 显示开始按钮，而不是自动消失
             const btn = document.getElementById('start-btn');
             btn.style.opacity = 1;
             btn.style.pointerEvents = 'auto';
@@ -309,17 +319,41 @@
         }, 1500);
     }
 
-    // 由用户手动触发，确保看完了提示
     function startExperience() {
         const loader = document.getElementById('loader');
+        
+        // 尝试播放音乐 (Warm Memories - Piano)
+        const bgm = document.getElementById('bgm');
+        bgm.volume = 0.6; 
+        bgm.play().then(() => {
+            STATE.isMusicPlaying = true;
+            document.getElementById('music-btn').innerText = "🎵 暂停";
+        }).catch(e => {
+            console.log("Auto-play blocked, waiting for interaction.");
+            document.getElementById('music-btn').innerText = "🎵 播放";
+        });
+
         loader.style.opacity = 0;
         setTimeout(() => { 
             loader.style.display = 'none'; 
             STATE.isLoaded = true;
-            // 初始提示
             updateStatus("请对着镜头比出数字 '3' 开启");
             resetParticlesToSphere();
         }, 800);
+    }
+
+    function toggleMusic() {
+        const bgm = document.getElementById('bgm');
+        const btn = document.getElementById('music-btn');
+        if (STATE.isMusicPlaying) {
+            bgm.pause();
+            btn.innerText = "🎵 播放";
+            STATE.isMusicPlaying = false;
+        } else {
+            bgm.play();
+            btn.innerText = "🎵 暂停";
+            STATE.isMusicPlaying = true;
+        }
     }
 
     function setupThreeJS() {
@@ -397,12 +431,11 @@
         const positions = geometry.attributes.position.array;
         
         // 旋转控制
-        // 停止旋转的阶段: 倒计时(0-2), 文案(3-4), LOVE(7), 蛋糕(8), 结束(9)
         if (STATE.stage <= 4 || STATE.stage === 7 || STATE.stage === 8 || STATE.stage === 9) {
              particles.rotation.y = THREE.MathUtils.lerp(particles.rotation.y, 0, 0.05);
              particles.rotation.x = THREE.MathUtils.lerp(particles.rotation.x, 0, 0.05);
         }
-        else if (STATE.stage === 6) { // Arrow Heart - 缓慢旋转
+        else if (STATE.stage === 6) { 
              particles.rotation.y += 0.005; 
         } 
         else {
@@ -525,7 +558,6 @@
             scale = 3.0; zThick = 150; font = "bold 350px Arial";
         }
         else if (key.startsWith('MSG_')) {
-            // 文案优化：进一步缩小字号和缩放，确保大屏幕小屏幕都不溢出
             scale = 2.2; zThick = 50; 
             font = "bold 100px 'Microsoft YaHei', 'SimHei', sans-serif"; 
         }
@@ -874,7 +906,7 @@
                         showGestureIcon("➡");
                         updateSubStatus(`${STATE.messageIndex + 1} / ${CONFIG.messages.length}`);
                     } else {
-                        updateStatus("🎉 生日快乐！请比个心 ❤");
+                        updateStatus("🎉 生日快乐！请比个心 ❤ (或等待自动播放)");
                         updateSubStatus("");
                         morphTo(STATE.textParticles["HB"]);
                         STATE.stage = 5;
