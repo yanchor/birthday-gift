@@ -257,7 +257,7 @@
             "陈老师，你好！",
             "你就这么突然\n出现在我的人生里",
             "认识你已经\n七七四十九天了",
-            "因为你的宽宽宏大量\n我活到了今天",
+            "因为你的宽宏大量\n我活到了今天",
             "接下来我想说..."
         ]
     };
@@ -525,9 +525,9 @@
             scale = 3.0; zThick = 150; font = "bold 350px Arial";
         }
         else if (key.startsWith('MSG_')) {
-            // 文案优化：缩小字号以防溢出，增大scale以保持视觉大小
-            scale = 2.8; zThick = 50; 
-            font = "bold 120px 'Microsoft YaHei', 'SimHei', sans-serif"; 
+            // 文案优化：进一步缩小字号和缩放，确保大屏幕小屏幕都不溢出
+            scale = 2.2; zThick = 50; 
+            font = "bold 100px 'Microsoft YaHei', 'SimHei', sans-serif"; 
         }
         else if (key === 'HB') {
             scale = 2.0; font = "bold 200px Arial";
@@ -799,7 +799,12 @@
 
     function handleGameLogic(gesture) {
         const now = Date.now();
-        if (now - STATE.lastActionTime < 2000) return; 
+        
+        // 动态冷却时间
+        let cooldown = 2000;
+        if (STATE.stage === 4) cooldown = 3000; // 那五句文案之间增加到 3 秒
+        
+        if (now - STATE.lastActionTime < cooldown) return; 
 
         if (gesture !== "SWIPE") {
              if (gesture === STATE.lastGesture && gesture !== "NONE") {
@@ -841,6 +846,7 @@
                     STATE.gestureBuffer = 0;
                     STATE.lastActionTime = now;
                     
+                    // 延时提示下一步操作
                     setTimeout(() => {
                          updateStatus("👉 请挥手或划过屏幕，听我说...");
                          showGestureIcon("👋");
@@ -867,7 +873,7 @@
                         showGestureIcon("➡");
                         updateSubStatus(`${STATE.messageIndex + 1} / ${CONFIG.messages.length}`);
                     } else {
-                        updateStatus("🎉 生日快乐！请比个心 ❤ (或等待自动播放)");
+                        updateStatus("🎉 生日快乐！请比个心 ❤");
                         updateSubStatus("");
                         morphTo(STATE.textParticles["HB"]);
                         STATE.stage = 5;
@@ -898,7 +904,7 @@
                 break;
             case 7: // Love -> Cake
                 if (gesture === "SWIPE" || gesture === "PALM") {
-                    updateStatus("🎂 请双手合十许愿，或者等待8秒自动许愿...");
+                    updateStatus("🎂 请双手合十许愿");
                     showGestureIcon("🙏");
                     generateCakeShape();
                     STATE.stage = 8;
