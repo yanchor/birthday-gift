@@ -120,7 +120,24 @@
             border-radius: 15px;
             border: 1px solid #d4af37;
             box-shadow: 0 0 50px rgba(0,0,0,0.8);
-            width: 300px;
+            width: 320px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        #start-btn {
+            margin-top: 20px;
+            background: #d4af37;
+            color: #000;
+            border: none;
+            padding: 10px 30px;
+            border-radius: 25px;
+            font-weight: bold;
+            cursor: pointer;
+            opacity: 0;
+            transition: opacity 1s;
+            pointer-events: none; /* 一开始不可点 */
         }
 
         #gesture-icon {
@@ -153,10 +170,13 @@
     <div id="loading-text" style="font-size: 16px; margin-bottom: 15px;">正在为您准备专属时空...</div>
     <div style="font-size:13px; opacity: 0.8; color: #eee; line-height: 1.6; border-top: 1px solid rgba(255,255,255,0.2); padding-top: 15px; width: 100%; text-align: left;">
         <strong>温馨提醒：</strong><br>
-        1. 本体验包含互动环节，请允许<strong>摄像头权限</strong>。<br>
-        2. 请按照屏幕下方的文字指引进行操作。<br>
-        3. 请保持环境光线充足，尽情享用。
+        1. 本体验包含互动环节，请务必允许<strong>摄像头权限</strong>。<br>
+        2. 建议调高屏幕亮度，保持环境光线充足。<br>
+        3. 请耐心按照屏幕下方的指引进行手势操作。<br>
+        4. 即使识别稍慢也不要急，深呼吸，慢慢来。<br>
+        5. 准备好开启这段旅程了吗？
     </div>
+    <button id="start-btn" onclick="startExperience()">开启旅程</button>
 </div>
 
 <div id="status-bar">
@@ -233,7 +253,6 @@
             fire: new THREE.Color(0xff4500)       
         },
         swipeThreshold: 0.15,
-        // 定制文案
         messages: [
             "陈老师，你好！",
             "你就这么突然\n出现在我的人生里",
@@ -253,7 +272,7 @@
         swipeCooldown: 0,
         gestureBuffer: 0,
         lastGesture: "",
-        lastActionTime: 0, // 用于防止连续触发
+        lastActionTime: 0,
         flameParticles: [] 
     };
 
@@ -264,7 +283,6 @@
         setupThreeJS();
         setupMediaPipe();
         
-        // 预生成所有文字形状
         setTimeout(() => {
             document.getElementById('loading-text').innerText = "正在编织粒子星空...";
             
@@ -280,13 +298,26 @@
             generateTextShape("I LOVE\nYOU", "LOVE"); 
             generateTextShape("沛沛\n生日快乐！", "FINAL");
             
-            document.getElementById('loader').style.opacity = 0;
-            setTimeout(() => { document.getElementById('loader').style.display = 'none'; }, 500);
+            // 显示开始按钮，而不是自动消失
+            const btn = document.getElementById('start-btn');
+            btn.style.opacity = 1;
+            btn.style.pointerEvents = 'auto';
+            document.getElementById('loading-text').innerText = "一切准备就绪";
             
+        }, 1500);
+    }
+
+    // 由用户手动触发，确保看完了提示
+    function startExperience() {
+        const loader = document.getElementById('loader');
+        loader.style.opacity = 0;
+        setTimeout(() => { 
+            loader.style.display = 'none'; 
             STATE.isLoaded = true;
-            updateStatus("请比出数字 '3' 开始倒计时");
+            // 初始提示
+            updateStatus("请对着镜头比出数字 '3' 开启");
             resetParticlesToSphere();
-        }, 1000);
+        }, 800);
     }
 
     function setupThreeJS() {
@@ -363,26 +394,27 @@
         const time = Date.now() * 0.001;
         const positions = geometry.attributes.position.array;
         
-        if (STATE.stage === 6) { // Arrow Heart - Slow Rotate
+        // 倒计时、文案、蛋糕、结束语 -> 不旋转
+        if (STATE.stage <= 4 || STATE.stage === 8 || STATE.stage === 9) {
+             particles.rotation.y = THREE.MathUtils.lerp(particles.rotation.y, 0, 0.05);
+             particles.rotation.x = THREE.MathUtils.lerp(particles.rotation.x, 0, 0.05);
+        }
+        else if (STATE.stage === 6) { 
              particles.rotation.y += 0.005; 
         } 
-        else if (STATE.stage === 8) { // Cake (No Rotation)
-            particles.rotation.y = THREE.MathUtils.lerp(particles.rotation.y, 0, 0.05);
-            particles.rotation.x = THREE.MathUtils.lerp(particles.rotation.x, 0, 0.05);
-
-            if (STATE.flameParticles.length > 0) {
-                STATE.flameParticles.forEach(idx => {
-                    positions[idx * 3] += (Math.random() - 0.5) * 2; 
-                    positions[idx * 3 + 1] += (Math.random() - 0.5) * 2; 
-                    positions[idx * 3 + 2] += (Math.random() - 0.5) * 2; 
-                    if(Math.random() > 0.9) positions[idx * 3 + 1] += 1;
-                });
-                geometry.attributes.position.needsUpdate = true;
-            }
-        }
         else {
             particles.rotation.y += 0.0015;
             particles.rotation.x = Math.sin(time * 0.3) * 0.05;
+        }
+
+        if (STATE.stage === 8 && STATE.flameParticles.length > 0) {
+            STATE.flameParticles.forEach(idx => {
+                positions[idx * 3] += (Math.random() - 0.5) * 2; 
+                positions[idx * 3 + 1] += (Math.random() - 0.5) * 2; 
+                positions[idx * 3 + 2] += (Math.random() - 0.5) * 2; 
+                if(Math.random() > 0.9) positions[idx * 3 + 1] += 1;
+            });
+            geometry.attributes.position.needsUpdate = true;
         }
         
         const sizes = geometry.attributes.size.array;
@@ -489,7 +521,6 @@
             scale = 3.0; zThick = 150; font = "bold 350px Arial";
         }
         else if (key.startsWith('MSG_')) {
-            // 文案优化：缩小字号以防溢出，增大scale以保持视觉大小
             scale = 2.8; zThick = 50; 
             font = "bold 120px 'Microsoft YaHei', 'SimHei', sans-serif"; 
         }
@@ -509,73 +540,43 @@
         STATE.textParticles[key] = new Float32Array(coords);
     }
 
-    // 重写：更美观的立体一箭穿心
     function generateArrowHeartShape() {
         const positions = [];
         const colors = [];
         const total = CONFIG.particleCount;
-        
-        // 粒子分配：70% 爱心，30% 箭
         const heartP = 0.7;
         
         for (let i = 0; i < total; i++) {
             let x, y, z, r, g, b;
             
             if (i < total * heartP) {
-                // 立体爱心公式
-                const phi = Math.random() * Math.PI * 2;
-                const theta = Math.random() * Math.PI;
-                
                 const t = Math.random() * Math.PI * 2;
-                // 基本形状
                 let hx = 16 * Math.pow(Math.sin(t), 3);
                 let hy = 13 * Math.cos(t) - 5 * Math.cos(2*t) - 2 * Math.cos(3*t) - Math.cos(4*t);
-                let hz = (Math.random()-0.5) * 12; // 厚度
-                
-                // 内部填充
+                let hz = (Math.random()-0.5) * 12;
                 const scale = (0.5 + 0.5 * Math.random()) * 20;
-                x = hx * scale;
-                y = hy * scale;
-                z = hz * scale * 0.5;
-
-                r=1.0; g=0.1; b=0.3; // 红色
+                x = hx * scale; y = hy * scale; z = hz * scale * 0.5;
+                r=1.0; g=0.1; b=0.3;
             } else {
-                // 箭 (穿过心脏)
                 const t = Math.random(); 
-                // 从左上后 到 右下前
                 const p1 = {x: -400, y: 200, z: -100};
                 const p2 = {x: 400, y: -200, z: 100};
-                
                 let ax = p1.x + (p2.x - p1.x) * t;
                 let ay = p1.y + (p2.y - p1.y) * t;
                 let az = p1.z + (p2.z - p1.z) * t;
-                
                 const thickness = 5;
-                ax += (Math.random()-0.5) * thickness;
-                ay += (Math.random()-0.5) * thickness;
-                az += (Math.random()-0.5) * thickness;
-                
-                // 箭头 
+                ax += (Math.random()-0.5) * thickness; ay += (Math.random()-0.5) * thickness; az += (Math.random()-0.5) * thickness;
                 if (t > 0.95) {
                     const spread = (t - 0.95) * 300;
-                    ay += (Math.random()-0.5) * spread;
-                    az += (Math.random()-0.5) * spread;
+                    ay += (Math.random()-0.5) * spread; az += (Math.random()-0.5) * spread;
                 }
-                
-                // 箭羽
                 if (t < 0.15) {
                     const spread = (0.15 - t) * 250;
-                    if (Math.random() > 0.5) {
-                        ay += (Math.random()-0.5) * spread;
-                    } else {
-                        az += (Math.random()-0.5) * spread;
-                    }
+                    if (Math.random() > 0.5) { ay += (Math.random()-0.5) * spread; } else { az += (Math.random()-0.5) * spread; }
                 }
-
                 x = ax; y = ay; z = az;
-                r=1.0; g=0.85; b=0.1; // 金色
+                r=1.0; g=0.85; b=0.1; 
             }
-            
             positions.push(x, y, z);
             colors.push(r, g, b);
         }
@@ -587,59 +588,37 @@
         const colors = [];
         const total = CONFIG.particleCount;
         STATE.flameParticles = []; 
-        
-        const r1 = 200; const h1 = 150; 
-        const r2 = 140; const h2 = 120; 
+        const r1 = 200; const h1 = 150; const r2 = 140; const h2 = 120; 
         
         for(let i=0; i<total; i++) {
             let x, y, z, cr, cg, cb;
             const p = Math.random();
-
             if (p < 0.5) { 
-                const isTop = Math.random() > 0.7;
-                const angle = Math.random() * Math.PI * 2;
-                if (isTop) {
-                    const r = Math.sqrt(Math.random()) * r1;
-                    x = r * Math.cos(angle); z = r * Math.sin(angle); y = -100; 
-                } else {
-                    const h = Math.random() * h1;
-                    x = r1 * Math.cos(angle); z = r1 * Math.sin(angle); y = -100 - h;
-                }
+                const isTop = Math.random() > 0.7; const angle = Math.random() * Math.PI * 2;
+                if (isTop) { const r = Math.sqrt(Math.random()) * r1; x = r * Math.cos(angle); z = r * Math.sin(angle); y = -100; } 
+                else { const h = Math.random() * h1; x = r1 * Math.cos(angle); z = r1 * Math.sin(angle); y = -100 - h; }
                 cr=CONFIG.colors.cakeChoco.r; cg=CONFIG.colors.cakeChoco.g; cb=CONFIG.colors.cakeChoco.b;
             } 
             else if (p < 0.92) {
-                const isTop = Math.random() > 0.6;
-                const angle = Math.random() * Math.PI * 2;
-                if (isTop) {
-                    const r = Math.sqrt(Math.random()) * r2;
-                    x = r * Math.cos(angle); z = r * Math.sin(angle); y = -100 + h2; 
-                } else {
-                    const h = Math.random() * h2;
-                    x = r2 * Math.cos(angle); z = r2 * Math.sin(angle); y = -100 + h;
-                }
+                const isTop = Math.random() > 0.6; const angle = Math.random() * Math.PI * 2;
+                if (isTop) { const r = Math.sqrt(Math.random()) * r2; x = r * Math.cos(angle); z = r * Math.sin(angle); y = -100 + h2; } 
+                else { const h = Math.random() * h2; x = r2 * Math.cos(angle); z = r2 * Math.sin(angle); y = -100 + h; }
                 cr=CONFIG.colors.cakeBase.r; cg=CONFIG.colors.cakeBase.g; cb=CONFIG.colors.cakeBase.b;
             }
             else {
-                const cy = -100 + h2; 
-                const isFlame = Math.random() > 0.6;
+                const cy = -100 + h2; const isFlame = Math.random() > 0.6;
                 if (isFlame) {
                     STATE.flameParticles.push(i);
-                    const fr = Math.random() * 15;
-                    const ftheta = Math.random() * Math.PI * 2;
-                    const fy = Math.random() * 50;
-                    const taper = 1.0 - (fy / 50);
+                    const fr = Math.random() * 15; const ftheta = Math.random() * Math.PI * 2; const fy = Math.random() * 50; const taper = 1.0 - (fy / 50);
                     x = fr * taper * Math.cos(ftheta); z = fr * taper * Math.sin(ftheta); y = cy + 60 + fy;
                     cr=1.0; cg=0.5; cb=0.0; 
                 } else {
-                    const r = Math.random() * 12;
-                    const angle = Math.random() * Math.PI * 2;
-                    const h = Math.random() * 60;
+                    const r = Math.random() * 12; const angle = Math.random() * Math.PI * 2; const h = Math.random() * 60;
                     x = r * Math.cos(angle); z = r * Math.sin(angle); y = cy + h;
                     cr=1.0; cg=0.2; cb=0.2; 
                 }
             }
-            positions.push(x, y, z);
-            colors.push(cr, cg, cb);
+            positions.push(x, y, z); colors.push(cr, cg, cb);
         }
         morphTo(new Float32Array(positions), new Float32Array(colors));
     }
@@ -707,7 +686,8 @@
         let isSwipe = false;
         
         if (results.multiHandLandmarks && results.multiHandLandmarks.length > 0) {
-            // 双手合十检测
+            document.getElementById('debug').innerText = `Hand Detected`; // 提示已检测到手
+            
             if (results.multiHandLandmarks.length === 2) {
                 const h1 = results.multiHandLandmarks[0];
                 const h2 = results.multiHandLandmarks[1];
@@ -729,10 +709,9 @@
                     gesture = "SWIPE";
                 }
             }
-            
-            document.getElementById('debug').innerText = `Gesture: ${gesture} | Stage: ${STATE.stage}`;
         } else {
             STATE.lastHandX = null;
+            document.getElementById('debug').innerText = `No Hands`;
         }
 
         handleGameLogic(gesture);
@@ -765,27 +744,32 @@
 
     function detectStaticGesture(lm) {
         const isExtended = (tip, pip) => lm[tip].y < lm[pip].y;
-        const thumbOut = lm[4].x < lm[3].x; 
         const indexOut = isExtended(8, 6);
         const midOut = isExtended(12, 10);
         const ringOut = isExtended(16, 14);
         const pinkyOut = isExtended(20, 18);
-        const fingers = [indexOut, midOut, ringOut, pinkyOut].filter(Boolean).length;
+        // 放宽判定，不再强制 thumbOut
         
-        if (fingers === 3 && !thumbOut) return "THREE"; 
-        if (fingers === 2 && !ringOut && !pinkyOut) return "VICTORY"; 
-        if (fingers === 1 && !midOut) return "ONE";
+        // 3: Index, Mid, Ring
+        if (indexOut && midOut && ringOut && !pinkyOut) return "THREE"; 
+        // 2: Index, Mid
+        if (indexOut && midOut && !ringOut && !pinkyOut) return "VICTORY"; 
+        // 1: Index
+        if (indexOut && !midOut && !ringOut && !pinkyOut) return "ONE";
+        
         const pinchDist = Math.sqrt(Math.pow(lm[4].x - lm[8].x, 2) + Math.pow(lm[4].y - lm[8].y, 2));
         if (pinchDist < 0.06) return "PINCH";
-        if (fingers >= 4) return "PALM";
+        
+        // Palm: At least 4 fingers
+        const openFingers = [indexOut, midOut, ringOut, pinkyOut].filter(Boolean).length;
+        if (openFingers >= 3) return "PALM";
 
         return "NONE";
     }
 
     function handleGameLogic(gesture) {
-        // 防止过快触发
         const now = Date.now();
-        if (now - STATE.lastActionTime < 2000) return; // 全局冷却 2秒
+        if (now - STATE.lastActionTime < 2000) return; 
 
         if (gesture !== "SWIPE") {
              if (gesture === STATE.lastGesture && gesture !== "NONE") {
@@ -800,7 +784,7 @@
         switch(STATE.stage) {
             case 0: // 等待3
                 if (gesture === "THREE") {
-                    updateStatus("倒计时: 3");
+                    updateStatus("很好！接下来比出数字 '2'");
                     showGestureIcon("3");
                     morphTo(STATE.textParticles["3"]); 
                     STATE.stage = 1;
@@ -810,7 +794,7 @@
                 break;
             case 1: // 等待2
                 if (gesture === "VICTORY") {
-                    updateStatus("倒计时: 2");
+                    updateStatus("最后，比出数字 '1'");
                     showGestureIcon("2");
                     morphTo(STATE.textParticles["2"]); 
                     STATE.stage = 2;
@@ -820,12 +804,18 @@
                 break;
             case 2: // 等待1
                 if (gesture === "ONE") {
-                    updateStatus("倒计时: 1");
+                    updateStatus("即将开始...");
                     showGestureIcon("1");
                     morphTo(STATE.textParticles["1"]); 
                     STATE.stage = 3;
                     STATE.gestureBuffer = 0;
                     STATE.lastActionTime = now;
+                    
+                    // 延时提示下一步操作
+                    setTimeout(() => {
+                         updateStatus("👉 请挥手或划过屏幕，听我说...");
+                         showGestureIcon("👋");
+                    }, 2000);
                 }
                 break;
             case 3: // 开启文案
@@ -848,7 +838,6 @@
                         showGestureIcon("➡");
                         updateSubStatus(`${STATE.messageIndex + 1} / ${CONFIG.messages.length}`);
                     } else {
-                        // 文案结束，进入 Happy Birthday
                         updateStatus("🎉 生日快乐！请比个心 ❤");
                         updateSubStatus("");
                         morphTo(STATE.textParticles["HB"]);
@@ -857,24 +846,24 @@
                     STATE.lastActionTime = now;
                 }
                 break;
-            case 5: // HB -> Arrow Heart (需要比心手势触发)
+            case 5: // HB -> Arrow Heart
                 if (gesture === "PINCH") {
-                    updateStatus("💘 一箭穿心!");
+                    updateStatus("💘 收到爱心！请挥手继续");
                     showGestureIcon("🏹");
                     generateArrowHeartShape();
                     STATE.stage = 6;
                     STATE.lastActionTime = now;
                 }
                 break;
-            case 6: // Arrow Heart -> Love You (挥手切换)
+            case 6: // Arrow Heart -> Love You
                 if (gesture === "SWIPE" || gesture === "PALM") {
-                    updateStatus("❤️ 爱你~ 挥手继续");
+                    updateStatus("❤️ 挥手许愿");
                     morphTo(STATE.textParticles["LOVE"]);
                     STATE.stage = 7;
                     STATE.lastActionTime = now;
                 }
                 break;
-            case 7: // Love -> Cake (挥手切换)
+            case 7: // Love -> Cake
                 if (gesture === "SWIPE" || gesture === "PALM") {
                     updateStatus("🎂 请双手合十许愿");
                     showGestureIcon("🙏");
@@ -883,7 +872,7 @@
                     STATE.lastActionTime = now;
                 }
                 break;
-            case 8: // Cake -> Final (合十触发)
+            case 8: // Cake -> Final
                 if (gesture === "PRAY") {
                     updateStatus("✨ 愿望成真 ✨");
                     triggerConfetti();
@@ -891,7 +880,7 @@
                         morphTo(STATE.textParticles["FINAL"]);
                         STATE.stage = 9;
                     }, 1500);
-                    STATE.lastActionTime = now + 5000; // 结束锁定
+                    STATE.lastActionTime = now + 5000; 
                 }
                 break;
         }
