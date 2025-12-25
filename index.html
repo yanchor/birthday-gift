@@ -273,7 +273,9 @@
         gestureBuffer: 0,
         lastGesture: "",
         lastActionTime: 0,
-        flameParticles: [] 
+        flameParticles: [],
+        cakeTimer: null, // 蛋糕超时计时器
+        arrowHeartTimer: null // 一箭穿心超时计时器
     };
 
     let scene, camera, renderer, particles, geometry, material;
@@ -394,12 +396,13 @@
         const time = Date.now() * 0.001;
         const positions = geometry.attributes.position.array;
         
-        // 倒计时、文案、蛋糕、结束语 -> 不旋转
-        if (STATE.stage <= 4 || STATE.stage === 8 || STATE.stage === 9) {
+        // 旋转控制
+        // 停止旋转的阶段: 倒计时(0-2), 文案(3-4), LOVE(7), 蛋糕(8), 结束(9)
+        if (STATE.stage <= 4 || STATE.stage === 7 || STATE.stage === 8 || STATE.stage === 9) {
              particles.rotation.y = THREE.MathUtils.lerp(particles.rotation.y, 0, 0.05);
              particles.rotation.x = THREE.MathUtils.lerp(particles.rotation.x, 0, 0.05);
         }
-        else if (STATE.stage === 6) { 
+        else if (STATE.stage === 6) { // Arrow Heart - 缓慢旋转
              particles.rotation.y += 0.005; 
         } 
         else {
@@ -407,6 +410,7 @@
             particles.rotation.x = Math.sin(time * 0.3) * 0.05;
         }
 
+        // 烛火闪动
         if (STATE.stage === 8 && STATE.flameParticles.length > 0) {
             STATE.flameParticles.forEach(idx => {
                 positions[idx * 3] += (Math.random() - 0.5) * 2; 
@@ -521,6 +525,7 @@
             scale = 3.0; zThick = 150; font = "bold 350px Arial";
         }
         else if (key.startsWith('MSG_')) {
+            // 文案优化：缩小字号以防溢出，增大scale以保持视觉大小
             scale = 2.8; zThick = 50; 
             font = "bold 120px 'Microsoft YaHei', 'SimHei', sans-serif"; 
         }
@@ -758,13 +763,38 @@
         if (indexOut && !midOut && !ringOut && !pinkyOut) return "ONE";
         
         const pinchDist = Math.sqrt(Math.pow(lm[4].x - lm[8].x, 2) + Math.pow(lm[4].y - lm[8].y, 2));
-        if (pinchDist < 0.06) return "PINCH";
+        if (pinchDist < 0.1) return "PINCH";
         
         // Palm: At least 4 fingers
         const openFingers = [indexOut, midOut, ringOut, pinkyOut].filter(Boolean).length;
         if (openFingers >= 3) return "PALM";
 
         return "NONE";
+    }
+
+    // Helper: 触发箭头心形 (用于手势成功或超时)
+    function triggerArrowHeart() {
+        if (STATE.arrowHeartTimer) clearTimeout(STATE.arrowHeartTimer);
+        updateStatus("💘 收到爱心！请挥手继续");
+        showGestureIcon("🏹");
+        generateArrowHeartShape();
+        STATE.stage = 6;
+        STATE.lastActionTime = Date.now();
+    }
+
+    // 执行许愿成功后的逻辑
+    function triggerFinalMoment() {
+        if (STATE.cakeTimer) clearTimeout(STATE.cakeTimer);
+        
+        updateStatus("✨ 愿望已收到 ✨");
+        triggerConfetti();
+        
+        setTimeout(() => {
+            morphTo(STATE.textParticles["FINAL"]);
+            STATE.stage = 9;
+        }, 1500);
+        
+        STATE.lastActionTime = Date.now() + 5000; 
     }
 
     function handleGameLogic(gesture) {
@@ -811,7 +841,6 @@
                     STATE.gestureBuffer = 0;
                     STATE.lastActionTime = now;
                     
-                    // 延时提示下一步操作
                     setTimeout(() => {
                          updateStatus("👉 请挥手或划过屏幕，听我说...");
                          showGestureIcon("👋");
@@ -838,21 +867,25 @@
                         showGestureIcon("➡");
                         updateSubStatus(`${STATE.messageIndex + 1} / ${CONFIG.messages.length}`);
                     } else {
-                        updateStatus("🎉 生日快乐！请比个心 ❤");
+                        updateStatus("🎉 生日快乐！请比个心 ❤ (或等待自动播放)");
                         updateSubStatus("");
                         morphTo(STATE.textParticles["HB"]);
                         STATE.stage = 5;
+                        
+                        // 启动“一箭穿心”自动保底倒计时
+                        if (STATE.arrowHeartTimer) clearTimeout(STATE.arrowHeartTimer);
+                        STATE.arrowHeartTimer = setTimeout(() => {
+                            if (STATE.stage === 5) {
+                                triggerArrowHeart();
+                            }
+                        }, 6000); 
                     }
                     STATE.lastActionTime = now;
                 }
                 break;
             case 5: // HB -> Arrow Heart
                 if (gesture === "PINCH") {
-                    updateStatus("💘 收到爱心！请挥手继续");
-                    showGestureIcon("🏹");
-                    generateArrowHeartShape();
-                    STATE.stage = 6;
-                    STATE.lastActionTime = now;
+                    triggerArrowHeart();
                 }
                 break;
             case 6: // Arrow Heart -> Love You
@@ -865,22 +898,24 @@
                 break;
             case 7: // Love -> Cake
                 if (gesture === "SWIPE" || gesture === "PALM") {
-                    updateStatus("🎂 请双手合十许愿");
+                    updateStatus("🎂 请双手合十许愿，或者等待8秒自动许愿...");
                     showGestureIcon("🙏");
                     generateCakeShape();
                     STATE.stage = 8;
                     STATE.lastActionTime = now;
+                    
+                    // 启动自动许愿倒计时
+                    STATE.cakeTimer = setTimeout(() => {
+                        if (STATE.stage === 8) { 
+                            triggerFinalMoment();
+                        }
+                    }, 8000); 
                 }
                 break;
             case 8: // Cake -> Final
                 if (gesture === "PRAY") {
-                    updateStatus("✨ 愿望成真 ✨");
-                    triggerConfetti();
-                    setTimeout(() => {
-                        morphTo(STATE.textParticles["FINAL"]);
-                        STATE.stage = 9;
-                    }, 1500);
-                    STATE.lastActionTime = now + 5000; 
+                    showGestureIcon("🙏");
+                    triggerFinalMoment();
                 }
                 break;
         }
