@@ -21,7 +21,7 @@
             z-index: 1; 
             background: radial-gradient(circle at center, #1a1a1a 0%, #000 100%); 
         }
-        /* 摄像头画面 */
+        /* 摄像头画面 - 左上角半透明 */
         #video-wrapper { 
             position: absolute; 
             top: 20px; 
@@ -44,7 +44,6 @@
             transform: scaleX(-1); 
         }
         
-        /* UI 层 */
         #ui-layer { 
             position: absolute; 
             bottom: 30px; 
@@ -54,25 +53,37 @@
         
         #status-bar { 
             position: absolute; 
-            top: 10%; 
+            top: 15%; 
             width: 100%; 
             text-align: center; 
             z-index: 5; 
             pointer-events: none; 
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
         }
         #status-text {
-            color: #fff;
-            text-shadow: 0 0 10px rgba(255, 215, 0, 0.8);
-            font-size: 24px; 
-            letter-spacing: 4px; 
-            text-transform: uppercase;
-            font-weight: 300;
-            background: rgba(0,0,0,0.3);
+            color: rgba(255,255,255,0.95);
+            text-shadow: 0 0 10px rgba(255, 215, 0, 0.5);
+            font-size: 22px; 
+            letter-spacing: 2px; 
+            background: rgba(0,0,0,0.6);
             padding: 10px 30px;
             border-radius: 50px;
-            border: 1px solid rgba(255,255,255,0.1);
+            border: 1px solid rgba(255,215,0,0.3);
             backdrop-filter: blur(4px);
+            transition: all 0.3s;
         }
+        /* 进度提示小字 */
+        #sub-status {
+            font-size: 14px;
+            color: rgba(255,255,255,0.6);
+            letter-spacing: 1px;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+
         .btn { 
             background: rgba(20, 20, 20, 0.6); 
             border: 1px solid rgba(212, 175, 55, 0.5); 
@@ -93,7 +104,6 @@
             color: #fff;
         }
         
-        /* 加载与诊断面板 */
         .loader { 
             position: absolute; 
             top: 50%; 
@@ -105,20 +115,12 @@
             text-align: center;
             line-height: 1.8;
             transition: opacity 0.5s;
-            background: rgba(0,0,0,0.8);
-            padding: 20px;
-            border-radius: 10px;
+            background: rgba(0,0,0,0.85);
+            padding: 30px;
+            border-radius: 15px;
             border: 1px solid #d4af37;
-            max-width: 80%;
+            box-shadow: 0 0 30px rgba(0,0,0,0.8);
         }
-        .log-item {
-            font-size: 12px;
-            text-align: left;
-            margin-top: 5px;
-            font-family: monospace;
-        }
-        .log-success { color: #4caf50; }
-        .log-error { color: #f44336; }
 
         #gesture-icon {
             position: absolute;
@@ -146,13 +148,17 @@
 <body>
 
 <div class="loader" id="loader">
-    <div style="font-size: 18px; font-weight: bold; margin-bottom: 10px;">✦ 生日惊喜加载中 ✦</div>
-    <div id="loading-logs">正在初始化系统...</div>
-    <div style="font-size:12px; opacity: 0.7; color: #fff; margin-top: 15px;">如长时间卡住，请检查摄像头权限</div>
+    <div style="font-size: 20px; font-weight: bold; margin-bottom: 15px; color: #fff;">✦ 生日惊喜准备中 ✦</div>
+    <div id="loading-text">正在编织粒子星空...</div>
+    <div style="font-size:12px; opacity: 0.6; color: #ccc; margin-top: 20px;">
+        提示：请允许摄像头权限以进行互动<br>
+        (数据仅在本地处理，不会上传)
+    </div>
 </div>
 
 <div id="status-bar">
     <span id="status-text">系统启动中...</span>
+    <span id="sub-status"></span>
 </div>
 
 <div id="gesture-icon">👋</div>
@@ -163,7 +169,7 @@
 
 <div id="ui-layer">
     <button class="btn" onclick="toggleFullScreen()">
-        ⛶ 全屏体验
+        ⛶ 全屏沉浸
     </button>
 </div>
 
@@ -201,8 +207,7 @@
     
     void main() {
         vec4 texColor = texture2D(pointTexture, gl_PointCoord);
-        // 降低光晕倍率，从 2.0 降到 1.2，让颜色更实，照片更清晰
-        gl_FragColor = vec4(color * vColor * 1.2, vOpacity); 
+        gl_FragColor = vec4(color * vColor * 1.5, vOpacity); 
         gl_FragColor = gl_FragColor * texColor;
         if (gl_FragColor.a < 0.05) discard;
     }
@@ -213,29 +218,31 @@
      * >>>>>> 配置区域 <<<<<<
      */
     const CONFIG = {
-        particleCount: 45000, // 再次提升粒子数，保证照片像LED屏一样清晰
+        particleCount: 35000, 
         colors: {
             gold: new THREE.Color(0xffd700),
             silver: new THREE.Color(0xffffff),
             pink: new THREE.Color(0xff69b4),
             blue: new THREE.Color(0x87ceeb),
+            red: new THREE.Color(0xff0000),
             cakeBase: new THREE.Color(0xfffdd0), 
             cakeChoco: new THREE.Color(0x8b4513), 
             fire: new THREE.Color(0xff4500)       
         },
         swipeThreshold: 0.15,
-        // 图片列表：请确保文件名大小写与这里完全一致！
-        defaultImages: [
-            'p1.jpg', 
-            'p2.jpg', 
-            'p3.jpg'
+        // 定制文案
+        messages: [
+            "陈老师，你好！",
+            "你就这么突然\n出现在我的人生里",
+            "认识你已经\n七七四十九天了",
+            "因为你的宽宽宏大量\n我活到了今天",
+            "接下来我想说..."
         ]
     };
 
     const STATE = {
-        stage: 0, 
-        photos: [], 
-        currentPhotoIndex: 0,
+        stage: 0, // 0:Intro, 1-3:Count, 4:Messages, 5:HB, 6:ArrowHeart, 7:LoveYou, 8:Cake, 9:Final
+        messageIndex: 0,
         textParticles: {},
         isLoaded: false,
         lastHandX: null,
@@ -243,67 +250,46 @@
         swipeCooldown: 0,
         gestureBuffer: 0,
         lastGesture: "",
+        lastActionTime: 0, // 用于防止连续触发
         flameParticles: [] 
     };
-
-    // Logger Utility
-    function log(msg, type = 'info') {
-        const box = document.getElementById('loading-logs');
-        const div = document.createElement('div');
-        div.className = 'log-item ' + (type === 'error' ? 'log-error' : (type === 'success' ? 'log-success' : ''));
-        div.innerText = msg;
-        box.appendChild(div);
-        console.log(`[${type.toUpperCase()}] ${msg}`);
-    }
 
     let scene, camera, renderer, particles, geometry, material;
     let particlePositions, particleColors, particleSizes, particleOpacities;
     
     async function init() {
-        log("开始加载资源...");
-        
-        // 并行加载图片
-        await loadDefaultPhotos();
-        
-        log("初始化 3D 引擎...");
         setupThreeJS();
-        
-        log("初始化 AI 视觉模型 (可能需要几秒)...");
         setupMediaPipe();
         
-        // 预生成文字
+        // 预生成所有文字形状
         setTimeout(() => {
-            log("正在生成 3D 文字...");
+            document.getElementById('loading-text').innerText = "正在生成 3D 文字...";
+            
             generateTextShape("3", "3");
             generateTextShape("2", "2");
             generateTextShape("1", "1");
+            
+            CONFIG.messages.forEach((msg, i) => {
+                generateTextShape(msg, `MSG_${i}`);
+            });
+            
             generateTextShape("Happy\nBirthday", "HB");
+            generateTextShape("I LOVE\nYOU", "LOVE"); 
             generateTextShape("沛沛\n生日快乐！", "FINAL");
             
-            // 检查照片是否加载成功
-            if (STATE.photos.length === 0) {
-                log("❌ 警告：所有照片加载失败！相册模式将无法显示。", "error");
-                log("请检查文件名大小写是否匹配 (p1.jpg vs P1.JPG)", "error");
-                // 不隐藏 loader，让用户看到错误
-                document.getElementById('loader').innerHTML += '<br><button class="btn" onclick="document.getElementById(\'loader\').style.display=\'none\'">忽略错误强制开始</button>';
-            } else {
-                log("✅ 系统就绪！", "success");
-                setTimeout(() => {
-                    document.getElementById('loader').style.opacity = 0;
-                    setTimeout(() => { document.getElementById('loader').style.display = 'none'; }, 500);
-                }, 800);
-                
-                STATE.isLoaded = true;
-                updateStatus("请比出数字 '3' 开始倒计时");
-                resetParticlesToSphere();
-            }
+            document.getElementById('loader').style.opacity = 0;
+            setTimeout(() => { document.getElementById('loader').style.display = 'none'; }, 500);
+            
+            STATE.isLoaded = true;
+            updateStatus("请比出数字 '3' 开始倒计时");
+            resetParticlesToSphere();
         }, 1000);
     }
 
     function setupThreeJS() {
         const container = document.getElementById('canvas-container');
         scene = new THREE.Scene();
-        scene.fog = new THREE.FogExp2(0x000000, 0.0003); 
+        scene.fog = new THREE.FogExp2(0x000000, 0.0004); 
 
         camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 1, 5000);
         camera.position.z = 800;
@@ -341,9 +327,8 @@
             particleColors[i * 3 + 1] = color.g;
             particleColors[i * 3 + 2] = color.b;
 
-            // 稍微调小一点基础粒子大小，让画面更细腻
-            particleSizes[i] = 8 + Math.random() * 10; 
-            particleOpacities[i] = 0.9 + Math.random() * 0.1; // 高不透明度
+            particleSizes[i] = 8 + Math.random() * 12; 
+            particleOpacities[i] = 0.8 + Math.random() * 0.2; 
         }
 
         geometry.setAttribute('position', new THREE.BufferAttribute(particlePositions, 3));
@@ -375,15 +360,13 @@
         const time = Date.now() * 0.001;
         const positions = geometry.attributes.position.array;
         
-        // 场景动画逻辑
-        if (STATE.stage === 6) { // Heart
-             particles.rotation.y += 0.01; 
+        if (STATE.stage === 6) { // Arrow Heart - Slow Rotate
+             particles.rotation.y += 0.005; 
         } 
         else if (STATE.stage === 8) { // Cake (No Rotation)
             particles.rotation.y = THREE.MathUtils.lerp(particles.rotation.y, 0, 0.05);
             particles.rotation.x = THREE.MathUtils.lerp(particles.rotation.x, 0, 0.05);
 
-            // 烛火闪动特效
             if (STATE.flameParticles.length > 0) {
                 STATE.flameParticles.forEach(idx => {
                     positions[idx * 3] += (Math.random() - 0.5) * 2; 
@@ -394,14 +377,16 @@
                 geometry.attributes.position.needsUpdate = true;
             }
         }
-        else if (STATE.stage === 4) { // 相册模式：不要旋转，让照片正对屏幕
-            particles.rotation.y = THREE.MathUtils.lerp(particles.rotation.y, 0, 0.05);
-            particles.rotation.x = THREE.MathUtils.lerp(particles.rotation.x, 0, 0.05);
-        }
         else {
             particles.rotation.y += 0.0015;
             particles.rotation.x = Math.sin(time * 0.3) * 0.05;
         }
+        
+        const sizes = geometry.attributes.size.array;
+        for(let i=0; i < CONFIG.particleCount; i += 3) {
+            sizes[i] = (10 + Math.random() * 12) * (0.8 + 0.3 * Math.sin(time * 4 + i));
+        }
+        geometry.attributes.size.needsUpdate = true;
         
         renderer.render(scene, camera);
     }
@@ -472,7 +457,7 @@
         const data = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
         const positions = [];
         
-        const stepDense = 3; 
+        const stepDense = 4;
         for (let y = 0; y < canvas.height; y += stepDense) {
             for (let x = 0; x < canvas.width; x += stepDense) {
                 const index = (y * canvas.width + x) * 4;
@@ -480,19 +465,11 @@
                     positions.push((x - canvas.width/2) * scaleFactor);
                     positions.push(-(y - canvas.height/2) * scaleFactor + yOffset);
                     positions.push(0); 
-                }
-            }
-        }
-
-        const stepLoose = 6;
-        for (let y = 0; y < canvas.height; y += stepLoose) {
-            for (let x = 0; x < canvas.width; x += stepLoose) {
-                const index = (y * canvas.width + x) * 4;
-                if (data[index + 3] > 128) {
-                    for(let k=0; k<2; k++) {
+                    
+                    if (Math.random() > 0.5) {
                         positions.push((x - canvas.width/2) * scaleFactor);
                         positions.push(-(y - canvas.height/2) * scaleFactor + yOffset);
-                        positions.push((Math.random() - 0.5) * zRange); 
+                        positions.push((Math.random() - 0.5) * zRange);
                     }
                 }
             }
@@ -501,93 +478,104 @@
     }
 
     function generateTextShape(text, key) {
-        let scale = 2.5;
-        let zThick = 150; 
-        let font = "bold 300px 'Verdana', sans-serif";
+        let scale = 2.0;
+        let zThick = 100; 
+        let font = "bold 200px 'Microsoft YaHei', 'SimHei', sans-serif"; 
         
-        if (key === 'HB') {
-            scale = 1.3; 
-            zThick = 100;
-            font = "bold 250px 'Verdana', sans-serif";
-        } else if (key === 'FINAL') {
-             scale = 1.4; 
-             zThick = 120;
-             font = "bold 220px 'Microsoft YaHei', sans-serif"; 
+        if (['3','2','1'].includes(key)) {
+            scale = 2.5; zThick = 150; font = "bold 300px Arial";
+        }
+        else if (key.startsWith('MSG_')) {
+            scale = 1.6; zThick = 50; 
+        }
+        else if (key === 'HB') {
+            scale = 1.8; font = "bold 220px Arial";
+        }
+        else if (key === 'LOVE') {
+            scale = 2.0; font = "bold 250px Arial";
         }
 
         const coords = getTextPixelData(text, font, scale, zThick, 0);
         STATE.textParticles[key] = new Float32Array(coords);
     }
 
-    // 优化的照片生成逻辑：超清晰版
-    async function processImageToParticles(img) {
-        const canvas = document.createElement('canvas');
-        const ctx = canvas.getContext('2d');
-        
-        // 再次提升解析度，以适配4.5万粒子
-        const maxSize = 220; 
-        let w = img.width;
-        let h = img.height;
-        if (w > h) { h = (h/w)*maxSize; w = maxSize; }
-        else { w = (w/h)*maxSize; h = maxSize; }
-        
-        canvas.width = w;
-        canvas.height = h;
-        ctx.drawImage(img, 0, 0, w, h);
-        
-        const data = ctx.getImageData(0, 0, w, h).data;
+    // 重写：更美观的立体一箭穿心
+    function generateArrowHeartShape() {
         const positions = [];
         const colors = [];
-        const scale = 4.0; 
+        const total = CONFIG.particleCount;
+        
+        // 粒子分配：70% 爱心，30% 箭
+        const heartP = 0.7;
+        
+        for (let i = 0; i < total; i++) {
+            let x, y, z, r, g, b;
+            
+            if (i < total * heartP) {
+                // 立体爱心公式
+                // (x^2 + 9/4y^2 + z^2 - 1)^3 - x^2z^3 - 9/80y^2z^3 = 0 的参数化近似
+                const phi = Math.random() * Math.PI * 2;
+                const theta = Math.random() * Math.PI;
+                
+                // 使用简单的参数方程变体
+                const t = Math.random() * Math.PI * 2;
+                // 基本形状
+                let hx = 16 * Math.pow(Math.sin(t), 3);
+                let hy = 13 * Math.cos(t) - 5 * Math.cos(2*t) - 2 * Math.cos(3*t) - Math.cos(4*t);
+                let hz = (Math.random()-0.5) * 12; // 厚度
+                
+                // 内部填充
+                const scale = (0.5 + 0.5 * Math.random()) * 20;
+                x = hx * scale;
+                y = hy * scale;
+                z = hz * scale * 0.5;
 
-        for (let y = 0; y < h; y += 1) {
-            for (let x = 0; x < w; x += 1) {
-                const index = (y * w + x) * 4;
-                if (data[index + 3] > 128) { 
-                    
-                    const px = (x - w/2) * scale * 1.5;
-                    const py = -(y - h/2) * scale * 1.5;
-                    
-                    const r = data[index] / 255;
-                    const g = data[index+1] / 255;
-                    const b = data[index+2] / 255;
-
-                    // 1. 基础平面层：绝对清晰
-                    positions.push(px, py, 0);
-                    colors.push(r, g, b);
-
-                    // 2. 增强填充：在同一点 Z轴微动，增加实感
-                    // 只有亮度高的点增加，避免黑色背景太厚
-                    const luma = 0.2126*r + 0.7152*g + 0.0722*b;
-                    if (luma > 0.2) {
-                        positions.push(px, py, (Math.random()-0.5)*3); 
-                        colors.push(r, g, b);
+                r=1.0; g=0.1; b=0.3; // 红色
+            } else {
+                // 箭 (穿过心脏，角度约 30度)
+                // 箭杆长约 800
+                const t = Math.random(); // 0 to 1 along arrow
+                const len = 900;
+                
+                // 旋转矩阵逻辑简化：直接定义起点终点
+                // 从左上后 到 右下前
+                const p1 = {x: -400, y: 200, z: -100};
+                const p2 = {x: 400, y: -200, z: 100};
+                
+                let ax = p1.x + (p2.x - p1.x) * t;
+                let ay = p1.y + (p2.y - p1.y) * t;
+                let az = p1.z + (p2.z - p1.z) * t;
+                
+                // 增加杆的粗细
+                const thickness = 5;
+                ax += (Math.random()-0.5) * thickness;
+                ay += (Math.random()-0.5) * thickness;
+                az += (Math.random()-0.5) * thickness;
+                
+                // 箭头 (在 t > 0.95)
+                if (t > 0.95) {
+                    const spread = (t - 0.95) * 300;
+                    ay += (Math.random()-0.5) * spread;
+                    az += (Math.random()-0.5) * spread;
+                }
+                
+                // 箭羽 (在 t < 0.15)
+                if (t < 0.15) {
+                    const spread = (0.15 - t) * 250;
+                    // 十字形羽毛
+                    if (Math.random() > 0.5) {
+                        ay += (Math.random()-0.5) * spread;
+                    } else {
+                        az += (Math.random()-0.5) * spread;
                     }
                 }
+
+                x = ax; y = ay; z = az;
+                r=1.0; g=0.85; b=0.1; // 金色
             }
-        }
-        return { pos: new Float32Array(positions), col: new Float32Array(colors) };
-    }
-
-    function generateHeartShape() {
-        const positions = [];
-        const colors = [];
-        const scale = 22; 
-        
-        for (let i = 0; i < CONFIG.particleCount; i++) {
-            const t = Math.random() * Math.PI * 2;
-            const x = 16 * Math.pow(Math.sin(t), 3);
-            const y = 13 * Math.cos(t) - 5 * Math.cos(2*t) - 2 * Math.cos(3*t) - Math.cos(4*t);
-            const z = (Math.random() - 0.5) * 40; 
-            const fillScale = Math.random(); 
             
-            positions.push(x * scale * (0.8 + 0.2*fillScale)); 
-            positions.push(y * scale * (0.8 + 0.2*fillScale));
-            positions.push(z * scale);
-
-            colors.push(1.0);
-            colors.push(0.1 + Math.random() * 0.4);
-            colors.push(0.3 + Math.random() * 0.3);
+            positions.push(x, y, z);
+            colors.push(r, g, b);
         }
         morphTo(new Float32Array(positions), new Float32Array(colors));
     }
@@ -598,14 +586,11 @@
         const total = CONFIG.particleCount;
         STATE.flameParticles = []; 
         
-        const r1 = 200; 
-        const h1 = 150; 
-        const r2 = 140; 
-        const h2 = 120; 
+        const r1 = 200; const h1 = 150; 
+        const r2 = 140; const h2 = 120; 
         
         for(let i=0; i<total; i++) {
-            let x, y, z;
-            let cr, cg, cb;
+            let x, y, z, cr, cg, cb;
             const p = Math.random();
 
             if (p < 0.5) { 
@@ -613,88 +598,64 @@
                 const angle = Math.random() * Math.PI * 2;
                 if (isTop) {
                     const r = Math.sqrt(Math.random()) * r1;
-                    x = r * Math.cos(angle);
-                    z = r * Math.sin(angle);
-                    y = -100; 
+                    x = r * Math.cos(angle); z = r * Math.sin(angle); y = -100; 
                 } else {
                     const h = Math.random() * h1;
-                    x = r1 * Math.cos(angle);
-                    z = r1 * Math.sin(angle);
-                    y = -100 - h;
+                    x = r1 * Math.cos(angle); z = r1 * Math.sin(angle); y = -100 - h;
                 }
                 cr=CONFIG.colors.cakeChoco.r; cg=CONFIG.colors.cakeChoco.g; cb=CONFIG.colors.cakeChoco.b;
             } 
-            else if (p < 0.90) {
+            else if (p < 0.92) {
                 const isTop = Math.random() > 0.6;
                 const angle = Math.random() * Math.PI * 2;
                 if (isTop) {
                     const r = Math.sqrt(Math.random()) * r2;
-                    x = r * Math.cos(angle);
-                    z = r * Math.sin(angle);
-                    y = -100 + h2; 
+                    x = r * Math.cos(angle); z = r * Math.sin(angle); y = -100 + h2; 
                 } else {
                     const h = Math.random() * h2;
-                    x = r2 * Math.cos(angle);
-                    z = r2 * Math.sin(angle);
-                    y = -100 + h;
+                    x = r2 * Math.cos(angle); z = r2 * Math.sin(angle); y = -100 + h;
                 }
                 cr=CONFIG.colors.cakeBase.r; cg=CONFIG.colors.cakeBase.g; cb=CONFIG.colors.cakeBase.b;
             }
             else {
                 const cy = -100 + h2; 
                 const isFlame = Math.random() > 0.6;
-                
                 if (isFlame) {
                     STATE.flameParticles.push(i);
                     const fr = Math.random() * 15;
                     const ftheta = Math.random() * Math.PI * 2;
                     const fy = Math.random() * 50;
-                    
                     const taper = 1.0 - (fy / 50);
-                    x = fr * taper * Math.cos(ftheta);
-                    z = fr * taper * Math.sin(ftheta);
-                    y = cy + 60 + fy;
-                    
+                    x = fr * taper * Math.cos(ftheta); z = fr * taper * Math.sin(ftheta); y = cy + 60 + fy;
                     cr=1.0; cg=0.5; cb=0.0; 
                 } else {
                     const r = Math.random() * 12;
                     const angle = Math.random() * Math.PI * 2;
                     const h = Math.random() * 60;
-                    x = r * Math.cos(angle);
-                    z = r * Math.sin(angle);
-                    y = cy + h;
+                    x = r * Math.cos(angle); z = r * Math.sin(angle); y = cy + h;
                     cr=1.0; cg=0.2; cb=0.2; 
                 }
             }
-            
             positions.push(x, y, z);
             colors.push(cr, cg, cb);
         }
-        
         morphTo(new Float32Array(positions), new Float32Array(colors));
     }
 
     function triggerConfetti() {
         const positions = geometry.attributes.position.array;
         const colors = geometry.attributes.customColor.array;
-        
         for(let i=0; i<CONFIG.particleCount; i++) {
             gsap.to(positions, {
                 [i * 3]: (Math.random() - 0.5) * 5000,
                 [i * 3 + 1]: (Math.random() - 0.5) * 5000,
                 [i * 3 + 2]: (Math.random() - 0.5) * 3000,
-                duration: 3,
-                ease: "expo.out",
-                onUpdate: () => geometry.attributes.position.needsUpdate = true
+                duration: 3, ease: "expo.out", onUpdate: () => geometry.attributes.position.needsUpdate = true
             });
-            
             const c = new THREE.Color().setHSL(Math.random(), 1, 0.7);
             gsap.to(colors, {
-                [i * 3]: c.r,
-                [i * 3 + 1]: c.g,
-                [i * 3 + 2]: c.b,
-                duration: 0.5,
-                onUpdate: () => geometry.attributes.customColor.needsUpdate = true
+                [i * 3]: c.r, [i * 3 + 1]: c.g, [i * 3 + 2]: c.b,
+                duration: 0.5, onUpdate: () => geometry.attributes.customColor.needsUpdate = true
             });
         }
     }
@@ -705,48 +666,13 @@
             const r = 1000 + Math.random() * 500;
             const theta = Math.random() * 2 * Math.PI;
             const phi = Math.acos(2 * Math.random() - 1);
-            
             gsap.to(positions, {
                 [i*3]: r * Math.sin(phi) * Math.cos(theta),
                 [i*3+1]: r * Math.sin(phi) * Math.sin(theta),
                 [i*3+2]: r * Math.cos(phi),
-                duration: 2.5,
-                ease: "power2.out"
+                duration: 2.5, ease: "power2.out"
             });
          }
-    }
-
-    function loadDefaultPhotos() {
-        return Promise.all(CONFIG.defaultImages.map(src => {
-            return new Promise((resolve) => {
-                const img = new Image();
-                // 移除 crossOrigin，避免本地文件加载报错
-                // img.crossOrigin = "Anonymous"; 
-                img.src = src;
-                img.onload = () => {
-                    log(`加载成功: ${src}`, 'success');
-                    resolve(img);
-                };
-                img.onerror = () => {
-                    log(`加载失败: ${src} (请检查文件名大小写!)`, 'error');
-                    resolve(null);
-                };
-            });
-        })).then(images => {
-            STATE.photos = images.filter(img => img !== null);
-        });
-    }
-
-    async function showNextPhoto() {
-        if(STATE.photos.length === 0) return;
-        showGestureIcon("✨");
-        
-        const img = STATE.photos[STATE.currentPhotoIndex];
-        const shapeData = await processImageToParticles(img);
-        
-        morphTo(shapeData.pos, shapeData.col);
-        
-        STATE.currentPhotoIndex = (STATE.currentPhotoIndex + 1) % STATE.photos.length;
     }
 
     function setupMediaPipe() {
@@ -791,8 +717,7 @@
             
             if (gesture !== "PRAY") {
                 const landmarks = results.multiHandLandmarks[0];
-                
-                if (STATE.stage === 4) {
+                if ([4, 5, 6, 7].includes(STATE.stage)) {
                     isSwipe = detectSwipe(landmarks);
                 }
                 
@@ -838,28 +763,28 @@
 
     function detectStaticGesture(lm) {
         const isExtended = (tip, pip) => lm[tip].y < lm[pip].y;
-        
         const thumbOut = lm[4].x < lm[3].x; 
         const indexOut = isExtended(8, 6);
         const midOut = isExtended(12, 10);
         const ringOut = isExtended(16, 14);
         const pinkyOut = isExtended(20, 18);
-        
         const fingers = [indexOut, midOut, ringOut, pinkyOut].filter(Boolean).length;
         
         if (fingers === 3 && !thumbOut) return "THREE"; 
         if (fingers === 2 && !ringOut && !pinkyOut) return "VICTORY"; 
         if (fingers === 1 && !midOut) return "ONE";
-        
         const pinchDist = Math.sqrt(Math.pow(lm[4].x - lm[8].x, 2) + Math.pow(lm[4].y - lm[8].y, 2));
         if (pinchDist < 0.06) return "PINCH";
-        
         if (fingers >= 4) return "PALM";
 
         return "NONE";
     }
 
     function handleGameLogic(gesture) {
+        // 防止过快触发
+        const now = Date.now();
+        if (now - STATE.lastActionTime < 2000) return; // 全局冷却 2秒
+
         if (gesture !== "SWIPE") {
              if (gesture === STATE.lastGesture && gesture !== "NONE") {
                 STATE.gestureBuffer++;
@@ -878,6 +803,7 @@
                     morphTo(STATE.textParticles["3"]); 
                     STATE.stage = 1;
                     STATE.gestureBuffer = 0;
+                    STATE.lastActionTime = now;
                 }
                 break;
             case 1: // 等待2
@@ -887,6 +813,7 @@
                     morphTo(STATE.textParticles["2"]); 
                     STATE.stage = 2;
                     STATE.gestureBuffer = 0;
+                    STATE.lastActionTime = now;
                 }
                 break;
             case 2: // 等待1
@@ -896,60 +823,73 @@
                     morphTo(STATE.textParticles["1"]); 
                     STATE.stage = 3;
                     STATE.gestureBuffer = 0;
+                    STATE.lastActionTime = now;
                 }
                 break;
-            case 3: // 触发相册
-                if (gesture === "PALM") {
-                    updateStatus("相册模式: 挥手切换照片 👋");
+            case 3: // 开启文案
+                if (gesture === "PALM" || gesture === "SWIPE") {
+                    STATE.messageIndex = 0;
+                    updateStatus("✨ 挥手或划过屏幕翻页");
+                    updateSubStatus(`1 / ${CONFIG.messages.length}`);
                     showGestureIcon("👋");
-                    showNextPhoto();
+                    morphTo(STATE.textParticles[`MSG_0`]);
                     STATE.stage = 4;
+                    STATE.lastActionTime = now;
                 }
                 break;
-            case 4: // 相册互动 (挥手)
-                if (gesture === "SWIPE") {
-                    showNextPhoto();
-                } else if (gesture === "VICTORY") {
-                    updateStatus("🎉 生日快乐! (比个心?)");
-                    showGestureIcon("✌️");
-                    morphTo(STATE.textParticles["HB"]);
-                    STATE.stage = 5;
-                    gsap.to(particles.rotation, {x: 0, y: 0, duration: 1});
-                }
-                break;
-            case 5: // 等待爱心
-                if (gesture === "PINCH") {
-                    updateStatus("❤ Love You ❤");
-                    showGestureIcon("❤");
-                    generateHeartShape();
-                    STATE.stage = 6;
-                }
-                break;
-            case 6: // 等待彩带
-                if (gesture === "PALM") {
-                    updateStatus("Happy Birthday!!!");
-                    showGestureIcon("🎂");
-                    triggerConfetti();
-                    STATE.stage = 7;
+            case 4: // 文案切换 (0-4)
+                if (gesture === "SWIPE" || gesture === "PALM") {
+                    STATE.messageIndex++;
                     
-                    setTimeout(() => {
-                        updateStatus("请双手合十许愿，熄灭蜡烛~");
-                        generateCakeShape();
-                        STATE.stage = 8;
-                    }, 3500);
+                    if (STATE.messageIndex < CONFIG.messages.length) {
+                        morphTo(STATE.textParticles[`MSG_${STATE.messageIndex}`]);
+                        showGestureIcon("➡");
+                        updateSubStatus(`${STATE.messageIndex + 1} / ${CONFIG.messages.length}`);
+                    } else {
+                        // 文案结束，进入 Happy Birthday
+                        updateStatus("🎉 生日快乐！请比个心 ❤");
+                        updateSubStatus("");
+                        morphTo(STATE.textParticles["HB"]);
+                        STATE.stage = 5;
+                    }
+                    STATE.lastActionTime = now;
                 }
                 break;
-            case 8: // 双手合十 -> 最终祝福
+            case 5: // HB -> Arrow Heart (需要比心手势触发)
+                if (gesture === "PINCH") {
+                    updateStatus("💘 一箭穿心!");
+                    showGestureIcon("🏹");
+                    generateArrowHeartShape();
+                    STATE.stage = 6;
+                    STATE.lastActionTime = now;
+                }
+                break;
+            case 6: // Arrow Heart -> Love You (挥手切换)
+                if (gesture === "SWIPE" || gesture === "PALM") {
+                    updateStatus("❤️ 爱你~ 挥手继续");
+                    morphTo(STATE.textParticles["LOVE"]);
+                    STATE.stage = 7;
+                    STATE.lastActionTime = now;
+                }
+                break;
+            case 7: // Love -> Cake (挥手切换)
+                if (gesture === "SWIPE" || gesture === "PALM") {
+                    updateStatus("🎂 请双手合十许愿");
+                    showGestureIcon("🙏");
+                    generateCakeShape();
+                    STATE.stage = 8;
+                    STATE.lastActionTime = now;
+                }
+                break;
+            case 8: // Cake -> Final (合十触发)
                 if (gesture === "PRAY") {
                     updateStatus("✨ 愿望成真 ✨");
-                    showGestureIcon("🙏");
-                    
                     triggerConfetti();
-                    
                     setTimeout(() => {
                         morphTo(STATE.textParticles["FINAL"]);
                         STATE.stage = 9;
                     }, 1500);
+                    STATE.lastActionTime = now + 5000; // 结束锁定
                 }
                 break;
         }
@@ -962,6 +902,16 @@
             el.innerText = text;
             el.style.opacity = 1;
         }, 300);
+    }
+
+    function updateSubStatus(text) {
+        const el = document.getElementById('sub-status');
+        if(!text) {
+            el.style.opacity = 0;
+        } else {
+            el.innerText = text;
+            el.style.opacity = 1;
+        }
     }
     
     function showGestureIcon(icon) {
