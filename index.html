@@ -21,7 +21,6 @@
             z-index: 1; 
             background: radial-gradient(circle at center, #1a1a1a 0%, #000 100%); 
         }
-        /* 摄像头画面 - 左上角半透明 */
         #video-wrapper { 
             position: absolute; 
             top: 20px; 
@@ -43,7 +42,6 @@
             object-fit: cover; 
             transform: scaleX(-1); 
         }
-        
         #ui-layer { 
             position: absolute; 
             bottom: 30px; 
@@ -52,7 +50,6 @@
             display: flex;
             gap: 10px;
         }
-        
         #status-bar { 
             position: absolute; 
             top: 15%; 
@@ -77,7 +74,6 @@
             backdrop-filter: blur(4px);
             transition: all 0.3s;
         }
-        /* 进度提示小字 */
         #sub-status {
             font-size: 14px;
             color: rgba(255,255,255,0.6);
@@ -85,7 +81,6 @@
             opacity: 0;
             transition: opacity 0.3s;
         }
-
         .btn { 
             background: rgba(20, 20, 20, 0.6); 
             border: 1px solid rgba(212, 175, 55, 0.5); 
@@ -108,7 +103,6 @@
             transform: scale(1.05);
             color: #fff;
         }
-        
         .loader { 
             position: absolute; 
             top: 50%; 
@@ -130,7 +124,6 @@
             flex-direction: column;
             align-items: center;
         }
-
         #start-btn {
             margin-top: 20px;
             background: #d4af37;
@@ -142,9 +135,8 @@
             cursor: pointer;
             opacity: 0;
             transition: opacity 1s;
-            pointer-events: none; /* 一开始不可点 */
+            pointer-events: none; 
         }
-
         #gesture-icon {
             position: absolute;
             top: 50%;
@@ -170,12 +162,9 @@
 </head>
 <body>
 
-<!-- 音乐播放器 -->
 <audio id="bgm" loop preload="auto">
-    <!-- 1. 优先加载你下载的本地音乐文件 -->
+    <!-- 请确保同目录下有 River Flows in You.mp3 -->
     <source src="./River Flows in You.mp3" type="audio/mpeg">
-    <!-- 2. 在线备用链接 -->
-    <source src="https://cdn.pixabay.com/audio/2022/03/15/audio_c8c8a73467.mp3" type="audio/mpeg">
 </audio>
 
 <div class="loader" id="loader">
@@ -204,19 +193,20 @@
 </div>
 
 <div id="ui-layer">
-    <!-- 移除了暂停按钮，仅保留全屏 -->
     <button class="btn" onclick="toggleFullScreen()">⛶ 全屏</button>
 </div>
 
 <div id="canvas-container"></div>
 <div class="debug-info" id="debug"></div>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.9.1/gsap.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
-<script src="https://cdn.jsdelivr.net/npm/@mediapipe/control_utils/control_utils.js" crossorigin="anonymous"></script>
-<script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js" crossorigin="anonymous"></script>
-<script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js" crossorigin="anonymous"></script>
+<!-- 🔴 关键修改：将所有 JS 库替换为国内饿了么 CDN 镜像 -->
+<script src="https://npm.elemecdn.com/three@0.128.0/build/three.min.js"></script>
+<script src="https://npm.elemecdn.com/gsap@3.9.1/dist/gsap.min.js"></script>
+<!-- MediaPipe 国内源 -->
+<script src="https://npm.elemecdn.com/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
+<script src="https://npm.elemecdn.com/@mediapipe/control_utils/control_utils.js" crossorigin="anonymous"></script>
+<script src="https://npm.elemecdn.com/@mediapipe/drawing_utils/drawing_utils.js" crossorigin="anonymous"></script>
+<script src="https://npm.elemecdn.com/@mediapipe/hands/hands.js" crossorigin="anonymous"></script>
 
 <script type="x-shader/x-vertex" id="vertexshader">
     attribute float size;
@@ -224,7 +214,6 @@
     attribute float opacity; 
     varying vec3 vColor;
     varying float vOpacity;
-    
     void main() {
         vColor = customColor;
         vOpacity = opacity;
@@ -239,10 +228,9 @@
     uniform sampler2D pointTexture;
     varying vec3 vColor;
     varying float vOpacity;
-    
     void main() {
         vec4 texColor = texture2D(pointTexture, gl_PointCoord);
-        gl_FragColor = vec4(color * vColor * 1.5, vOpacity); 
+        gl_FragColor = vec4(color * vColor * 1.2, vOpacity); 
         gl_FragColor = gl_FragColor * texColor;
         if (gl_FragColor.a < 0.05) discard;
     }
@@ -250,7 +238,7 @@
 
 <script>
     /**
-     * >>>>>> 配置区域 <<<<<<
+     * CONFIG
      */
     const CONFIG = {
         particleCount: 35000, 
@@ -287,12 +275,10 @@
         lastActionTime: 0,
         flameParticles: [],
         cakeTimer: null, 
-        arrowHeartTimer: null,
-        isMusicPlaying: false
+        arrowHeartTimer: null
     };
 
     let scene, camera, renderer, particles, geometry, material;
-    let particlePositions, particleColors, particleSizes, particleOpacities;
     
     async function init() {
         setupThreeJS();
@@ -300,15 +286,10 @@
         
         setTimeout(() => {
             document.getElementById('loading-text').innerText = "正在编织粒子星空...";
-            
             generateTextShape("3", "3");
             generateTextShape("2", "2");
             generateTextShape("1", "1");
-            
-            CONFIG.messages.forEach((msg, i) => {
-                generateTextShape(msg, `MSG_${i}`);
-            });
-            
+            CONFIG.messages.forEach((msg, i) => generateTextShape(msg, `MSG_${i}`));
             generateTextShape("Happy\nBirthday", "HB");
             generateTextShape("I LOVE\nYOU", "LOVE"); 
             generateTextShape("沛沛\n生日快乐！", "FINAL");
@@ -317,20 +298,15 @@
             btn.style.opacity = 1;
             btn.style.pointerEvents = 'auto';
             document.getElementById('loading-text').innerText = "一切准备就绪";
-            
         }, 1500);
     }
 
     function startExperience() {
-        const loader = document.getElementById('loader');
-        
-        // 尝试播放音乐 (本地 mp3)
         const bgm = document.getElementById('bgm');
         bgm.volume = 0.6; 
-        bgm.play().catch(e => {
-            console.log("Auto-play blocked, waiting for interaction.");
-        });
+        bgm.play().catch(e => console.log("Audio waiting for interaction"));
 
+        const loader = document.getElementById('loader');
         loader.style.opacity = 0;
         setTimeout(() => { 
             loader.style.display = 'none'; 
@@ -340,73 +316,51 @@
         }, 800);
     }
 
-    // 移除了手动 toggleMusic 函数，因为按钮已经删除
-
     function setupThreeJS() {
         const container = document.getElementById('canvas-container');
         scene = new THREE.Scene();
         scene.fog = new THREE.FogExp2(0x000000, 0.0004); 
-
         camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 1, 5000);
         camera.position.z = 800;
-
         renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, powerPreference: "high-performance" });
         renderer.setPixelRatio(window.devicePixelRatio);
         renderer.setSize(window.innerWidth, window.innerHeight);
         container.appendChild(renderer.domElement);
-
         const sprite = new THREE.TextureLoader().load('https://threejs.org/examples/textures/sprites/spark1.png');
-
         geometry = new THREE.BufferGeometry();
-        particlePositions = new Float32Array(CONFIG.particleCount * 3);
-        particleColors = new Float32Array(CONFIG.particleCount * 3);
-        particleSizes = new Float32Array(CONFIG.particleCount);
-        particleOpacities = new Float32Array(CONFIG.particleCount);
-
+        const positions = new Float32Array(CONFIG.particleCount * 3);
+        const colors = new Float32Array(CONFIG.particleCount * 3);
+        const sizes = new Float32Array(CONFIG.particleCount);
+        const opacities = new Float32Array(CONFIG.particleCount);
         const color = new THREE.Color();
         for (let i = 0; i < CONFIG.particleCount; i++) {
             const r = 1500 * Math.random();
             const theta = Math.random() * 2 * Math.PI;
             const phi = Math.acos(2 * Math.random() - 1);
-
-            particlePositions[i * 3] = r * Math.sin(phi) * Math.cos(theta);
-            particlePositions[i * 3 + 1] = r * Math.sin(phi) * Math.sin(theta);
-            particlePositions[i * 3 + 2] = r * Math.cos(phi);
-
+            positions[i * 3] = r * Math.sin(phi) * Math.cos(theta);
+            positions[i * 3 + 1] = r * Math.sin(phi) * Math.sin(theta);
+            positions[i * 3 + 2] = r * Math.cos(phi);
             const rand = Math.random();
             if (rand > 0.6) color.set(CONFIG.colors.gold);
             else if (rand > 0.35) color.set(CONFIG.colors.pink);
             else if (rand > 0.15) color.set(CONFIG.colors.silver);
             else color.set(CONFIG.colors.blue);
-
-            particleColors[i * 3] = color.r;
-            particleColors[i * 3 + 1] = color.g;
-            particleColors[i * 3 + 2] = color.b;
-
-            particleSizes[i] = 8 + Math.random() * 12; 
-            particleOpacities[i] = 0.8 + Math.random() * 0.2; 
+            colors[i * 3] = color.r; colors[i * 3 + 1] = color.g; colors[i * 3 + 2] = color.b;
+            sizes[i] = 8 + Math.random() * 12; 
+            opacities[i] = 0.8 + Math.random() * 0.2; 
         }
-
-        geometry.setAttribute('position', new THREE.BufferAttribute(particlePositions, 3));
-        geometry.setAttribute('customColor', new THREE.BufferAttribute(particleColors, 3));
-        geometry.setAttribute('size', new THREE.BufferAttribute(particleSizes, 1));
-        geometry.setAttribute('opacity', new THREE.BufferAttribute(particleOpacities, 1));
-
+        geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+        geometry.setAttribute('customColor', new THREE.BufferAttribute(colors, 3));
+        geometry.setAttribute('size', new THREE.BufferAttribute(sizes, 1));
+        geometry.setAttribute('opacity', new THREE.BufferAttribute(opacities, 1));
         material = new THREE.ShaderMaterial({
-            uniforms: {
-                color: { value: new THREE.Color(0xffffff) },
-                pointTexture: { value: sprite }
-            },
+            uniforms: { color: { value: new THREE.Color(0xffffff) }, pointTexture: { value: sprite } },
             vertexShader: document.getElementById('vertexshader').textContent,
             fragmentShader: document.getElementById('fragmentshader').textContent,
-            blending: THREE.AdditiveBlending,
-            depthTest: false,
-            transparent: true
+            blending: THREE.AdditiveBlending, depthTest: false, transparent: true
         });
-
         particles = new THREE.Points(geometry, material);
         scene.add(particles);
-
         window.addEventListener('resize', onWindowResize, false);
         animate();
     }
@@ -415,21 +369,15 @@
         requestAnimationFrame(animate);
         const time = Date.now() * 0.001;
         const positions = geometry.attributes.position.array;
-        
-        // 旋转控制
         if (STATE.stage <= 4 || STATE.stage === 7 || STATE.stage === 8 || STATE.stage === 9) {
              particles.rotation.y = THREE.MathUtils.lerp(particles.rotation.y, 0, 0.05);
              particles.rotation.x = THREE.MathUtils.lerp(particles.rotation.x, 0, 0.05);
-        }
-        else if (STATE.stage === 6) { 
+        } else if (STATE.stage === 6) { 
              particles.rotation.y += 0.005; 
-        } 
-        else {
+        } else {
             particles.rotation.y += 0.0015;
             particles.rotation.x = Math.sin(time * 0.3) * 0.05;
         }
-
-        // 烛火闪动
         if (STATE.stage === 8 && STATE.flameParticles.length > 0) {
             STATE.flameParticles.forEach(idx => {
                 positions[idx * 3] += (Math.random() - 0.5) * 2; 
@@ -439,13 +387,11 @@
             });
             geometry.attributes.position.needsUpdate = true;
         }
-        
         const sizes = geometry.attributes.size.array;
         for(let i=0; i < CONFIG.particleCount; i += 3) {
             sizes[i] = (10 + Math.random() * 12) * (0.8 + 0.3 * Math.sin(time * 4 + i));
         }
         geometry.attributes.size.needsUpdate = true;
-        
         renderer.render(scene, camera);
     }
 
@@ -453,44 +399,19 @@
         const positions = geometry.attributes.position.array;
         const colors = geometry.attributes.customColor.array;
         const targetCount = targetPositions.length / 3;
-        
         for (let i = 0; i < CONFIG.particleCount; i++) {
             let tx, ty, tz;
-
             if (i < targetCount) {
-                tx = targetPositions[i * 3];
-                ty = targetPositions[i * 3 + 1];
-                tz = targetPositions[i * 3 + 2];
+                tx = targetPositions[i * 3]; ty = targetPositions[i * 3 + 1]; tz = targetPositions[i * 3 + 2];
             } else {
                 const r = 1000 + Math.random() * 500;
-                const theta = Math.random() * Math.PI * 2;
-                const phi = Math.random() * Math.PI;
-                tx = r * Math.sin(phi) * Math.cos(theta);
-                ty = r * Math.sin(phi) * Math.sin(theta);
-                tz = r * Math.cos(phi);
+                const theta = Math.random() * Math.PI * 2; const phi = Math.random() * Math.PI;
+                tx = r * Math.sin(phi) * Math.cos(theta); ty = r * Math.sin(phi) * Math.sin(theta); tz = r * Math.cos(phi);
             }
-
             const delay = Math.random() * 0.5;
-
-            gsap.to(positions, {
-                [i * 3]: tx,
-                [i * 3 + 1]: ty,
-                [i * 3 + 2]: tz,
-                duration: 2.0,
-                delay: delay, 
-                ease: "power2.inOut",
-                onUpdate: () => geometry.attributes.position.needsUpdate = true
-            });
-
+            gsap.to(positions, { [i*3]: tx, [i*3+1]: ty, [i*3+2]: tz, duration: 2.0, delay: delay, ease: "power2.inOut", onUpdate: () => geometry.attributes.position.needsUpdate = true });
             if (targetColors && i < targetCount) {
-                gsap.to(colors, {
-                    [i * 3]: targetColors[i * 3],
-                    [i * 3 + 1]: targetColors[i * 3 + 1],
-                    [i * 3 + 2]: targetColors[i * 3 + 2],
-                    duration: 1.5,
-                    delay: delay,
-                    onUpdate: () => geometry.attributes.customColor.needsUpdate = true
-                });
+                gsap.to(colors, { [i*3]: targetColors[i*3], [i*3+1]: targetColors[i*3+1], [i*3+2]: targetColors[i*3+2], duration: 1.5, delay: delay, onUpdate: () => geometry.attributes.customColor.needsUpdate = true });
             }
         }
     }
@@ -498,32 +419,23 @@
     function getTextPixelData(text, font, scaleFactor, zRange, yOffset) {
         const canvas = document.createElement('canvas');
         const ctx = canvas.getContext('2d');
-        canvas.width = 1024;
-        canvas.height = 1024;
-        
-        ctx.font = font;
-        ctx.fillStyle = "white";
-        ctx.textAlign = "center";
-        ctx.textBaseline = "middle";
-        
+        canvas.width = 1024; canvas.height = 1024;
+        ctx.font = font; ctx.fillStyle = "white"; ctx.textAlign = "center"; ctx.textBaseline = "middle";
         const lines = text.split('\n');
         lines.forEach((line, i) => {
             const offset = (i - (lines.length-1)/2) * 220; 
             ctx.fillText(line, canvas.width/2, canvas.height/2 + offset);
         });
-
         const data = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
         const positions = [];
-        
-        const stepDense = 4;
-        for (let y = 0; y < canvas.height; y += stepDense) {
-            for (let x = 0; x < canvas.width; x += stepDense) {
+        const step = 4;
+        for (let y = 0; y < canvas.height; y += step) {
+            for (let x = 0; x < canvas.width; x += step) {
                 const index = (y * canvas.width + x) * 4;
                 if (data[index + 3] > 128) {
                     positions.push((x - canvas.width/2) * scaleFactor);
                     positions.push(-(y - canvas.height/2) * scaleFactor + yOffset);
                     positions.push(0); 
-                    
                     if (Math.random() > 0.5) {
                         positions.push((x - canvas.width/2) * scaleFactor);
                         positions.push(-(y - canvas.height/2) * scaleFactor + yOffset);
@@ -536,42 +448,20 @@
     }
 
     function generateTextShape(text, key) {
-        let scale = 2.0;
-        let zThick = 100; 
-        let font = "bold 200px 'Microsoft YaHei', 'SimHei', sans-serif"; 
-        
-        if (['3','2','1'].includes(key)) {
-            scale = 3.0; zThick = 150; font = "bold 350px Arial";
-        }
-        else if (key.startsWith('MSG_')) {
-            scale = 2.2; zThick = 50; 
-            font = "bold 100px 'Microsoft YaHei', 'SimHei', sans-serif"; 
-        }
-        else if (key === 'HB') {
-            scale = 2.0; font = "bold 200px Arial";
-        }
-        else if (key === 'LOVE') {
-            scale = 2.2; font = "bold 220px Arial";
-        }
-        else if (key === 'FINAL') {
-             scale = 1.8; 
-             zThick = 120;
-             font = "bold 180px 'Microsoft YaHei', sans-serif"; 
-        }
-
+        let scale = 2.0; let zThick = 100; let font = "bold 200px 'Microsoft YaHei', 'SimHei', sans-serif"; 
+        if (['3','2','1'].includes(key)) { scale = 3.0; zThick = 150; font = "bold 350px Arial"; }
+        else if (key.startsWith('MSG_')) { scale = 2.2; zThick = 50; font = "bold 100px 'Microsoft YaHei', 'SimHei', sans-serif"; }
+        else if (key === 'HB') { scale = 2.0; font = "bold 200px Arial"; }
+        else if (key === 'LOVE') { scale = 2.2; font = "bold 220px Arial"; }
+        else if (key === 'FINAL') { scale = 1.8; zThick = 120; font = "bold 180px 'Microsoft YaHei', sans-serif"; }
         const coords = getTextPixelData(text, font, scale, zThick, 0);
         STATE.textParticles[key] = new Float32Array(coords);
     }
 
     function generateArrowHeartShape() {
-        const positions = [];
-        const colors = [];
-        const total = CONFIG.particleCount;
-        const heartP = 0.7;
-        
+        const positions = []; const colors = []; const total = CONFIG.particleCount; const heartP = 0.7;
         for (let i = 0; i < total; i++) {
             let x, y, z, r, g, b;
-            
             if (i < total * heartP) {
                 const t = Math.random() * Math.PI * 2;
                 let hx = 16 * Math.pow(Math.sin(t), 3);
@@ -581,41 +471,24 @@
                 x = hx * scale; y = hy * scale; z = hz * scale * 0.5;
                 r=1.0; g=0.1; b=0.3;
             } else {
-                const t = Math.random(); 
-                const p1 = {x: -400, y: 200, z: -100};
-                const p2 = {x: 400, y: -200, z: 100};
-                let ax = p1.x + (p2.x - p1.x) * t;
-                let ay = p1.y + (p2.y - p1.y) * t;
-                let az = p1.z + (p2.z - p1.z) * t;
+                const t = Math.random(); const p1 = {x: -400, y: 200, z: -100}; const p2 = {x: 400, y: -200, z: 100};
+                let ax = p1.x + (p2.x - p1.x) * t; let ay = p1.y + (p2.y - p1.y) * t; let az = p1.z + (p2.z - p1.z) * t;
                 const thickness = 5;
                 ax += (Math.random()-0.5) * thickness; ay += (Math.random()-0.5) * thickness; az += (Math.random()-0.5) * thickness;
-                if (t > 0.95) {
-                    const spread = (t - 0.95) * 300;
-                    ay += (Math.random()-0.5) * spread; az += (Math.random()-0.5) * spread;
-                }
-                if (t < 0.15) {
-                    const spread = (0.15 - t) * 250;
-                    if (Math.random() > 0.5) { ay += (Math.random()-0.5) * spread; } else { az += (Math.random()-0.5) * spread; }
-                }
-                x = ax; y = ay; z = az;
-                r=1.0; g=0.85; b=0.1; 
+                if (t > 0.95) { const spread = (t - 0.95) * 300; ay += (Math.random()-0.5) * spread; az += (Math.random()-0.5) * spread; }
+                if (t < 0.15) { const spread = (0.15 - t) * 250; if (Math.random() > 0.5) ay += (Math.random()-0.5) * spread; else az += (Math.random()-0.5) * spread; }
+                x = ax; y = ay; z = az; r=1.0; g=0.85; b=0.1; 
             }
-            positions.push(x, y, z);
-            colors.push(r, g, b);
+            positions.push(x, y, z); colors.push(r, g, b);
         }
         morphTo(new Float32Array(positions), new Float32Array(colors));
     }
     
     function generateCakeShape() {
-        const positions = [];
-        const colors = [];
-        const total = CONFIG.particleCount;
-        STATE.flameParticles = []; 
+        const positions = []; const colors = []; const total = CONFIG.particleCount; STATE.flameParticles = []; 
         const r1 = 200; const h1 = 150; const r2 = 140; const h2 = 120; 
-        
         for(let i=0; i<total; i++) {
-            let x, y, z, cr, cg, cb;
-            const p = Math.random();
+            let x, y, z, cr, cg, cb; const p = Math.random();
             if (p < 0.5) { 
                 const isTop = Math.random() > 0.7; const angle = Math.random() * Math.PI * 2;
                 if (isTop) { const r = Math.sqrt(Math.random()) * r1; x = r * Math.cos(angle); z = r * Math.sin(angle); y = -100; } 
@@ -633,12 +506,10 @@
                 if (isFlame) {
                     STATE.flameParticles.push(i);
                     const fr = Math.random() * 15; const ftheta = Math.random() * Math.PI * 2; const fy = Math.random() * 50; const taper = 1.0 - (fy / 50);
-                    x = fr * taper * Math.cos(ftheta); z = fr * taper * Math.sin(ftheta); y = cy + 60 + fy;
-                    cr=1.0; cg=0.5; cb=0.0; 
+                    x = fr * taper * Math.cos(ftheta); z = fr * taper * Math.sin(ftheta); y = cy + 60 + fy; cr=1.0; cg=0.5; cb=0.0; 
                 } else {
                     const r = Math.random() * 12; const angle = Math.random() * Math.PI * 2; const h = Math.random() * 60;
-                    x = r * Math.cos(angle); z = r * Math.sin(angle); y = cy + h;
-                    cr=1.0; cg=0.2; cb=0.2; 
+                    x = r * Math.cos(angle); z = r * Math.sin(angle); y = cy + h; cr=1.0; cg=0.2; cb=0.2; 
                 }
             }
             positions.push(x, y, z); colors.push(cr, cg, cb);
@@ -650,147 +521,83 @@
         const positions = geometry.attributes.position.array;
         const colors = geometry.attributes.customColor.array;
         for(let i=0; i<CONFIG.particleCount; i++) {
-            gsap.to(positions, {
-                [i * 3]: (Math.random() - 0.5) * 5000,
-                [i * 3 + 1]: (Math.random() - 0.5) * 5000,
-                [i * 3 + 2]: (Math.random() - 0.5) * 3000,
-                duration: 3, ease: "expo.out", onUpdate: () => geometry.attributes.position.needsUpdate = true
-            });
+            gsap.to(positions, { [i*3]: (Math.random()-0.5)*5000, [i*3+1]: (Math.random()-0.5)*5000, [i*3+2]: (Math.random()-0.5)*3000, duration: 3, ease: "expo.out", onUpdate: () => geometry.attributes.position.needsUpdate = true });
             const c = new THREE.Color().setHSL(Math.random(), 1, 0.7);
-            gsap.to(colors, {
-                [i * 3]: c.r, [i * 3 + 1]: c.g, [i * 3 + 2]: c.b,
-                duration: 0.5, onUpdate: () => geometry.attributes.customColor.needsUpdate = true
-            });
+            gsap.to(colors, { [i*3]: c.r, [i*3+1]: c.g, [i*3+2]: c.b, duration: 0.5, onUpdate: () => geometry.attributes.customColor.needsUpdate = true });
         }
     }
     
     function resetParticlesToSphere() {
          const positions = geometry.attributes.position.array;
          for(let i=0; i<CONFIG.particleCount; i++) {
-            const r = 1000 + Math.random() * 500;
-            const theta = Math.random() * 2 * Math.PI;
-            const phi = Math.acos(2 * Math.random() - 1);
-            gsap.to(positions, {
-                [i*3]: r * Math.sin(phi) * Math.cos(theta),
-                [i*3+1]: r * Math.sin(phi) * Math.sin(theta),
-                [i*3+2]: r * Math.cos(phi),
-                duration: 2.5, ease: "power2.out"
-            });
+            const r = 1000 + Math.random() * 500; const theta = Math.random() * 2 * Math.PI; const phi = Math.acos(2 * Math.random() - 1);
+            gsap.to(positions, { [i*3]: r * Math.sin(phi) * Math.cos(theta), [i*3+1]: r * Math.sin(phi) * Math.sin(theta), [i*3+2]: r * Math.cos(phi), duration: 2.5, ease: "power2.out" });
          }
     }
 
     function setupMediaPipe() {
         const videoElement = document.getElementById('input-video');
-        const hands = new Hands({locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`});
+        // 🔴 关键修改：使用国内 CDN 镜像
+        const hands = new Hands({locateFile: (file) => `https://npm.elemecdn.com/@mediapipe/hands/${file}`});
         
-        hands.setOptions({
-            maxNumHands: 2, 
-            modelComplexity: 1,
-            minDetectionConfidence: 0.7,
-            minTrackingConfidence: 0.7
-        });
-        
+        hands.setOptions({ maxNumHands: 2, modelComplexity: 1, minDetectionConfidence: 0.7, minTrackingConfidence: 0.7 });
         hands.onResults(onHandsResults);
         
         const cameraUtils = new Camera(videoElement, {
-            onFrame: async () => {
-                await hands.send({image: videoElement});
-            },
-            width: 320,
-            height: 240
+            onFrame: async () => { await hands.send({image: videoElement}); },
+            width: 320, height: 240
         });
         cameraUtils.start();
     }
 
     function onHandsResults(results) {
         if (!STATE.isLoaded) return;
-        
-        let gesture = "NONE";
-        let isSwipe = false;
+        let gesture = "NONE"; let isSwipe = false;
         
         if (results.multiHandLandmarks && results.multiHandLandmarks.length > 0) {
-            document.getElementById('debug').innerText = `Hand Detected`; // 提示已检测到手
-            
+            document.getElementById('debug').innerText = `Hand Detected`;
             if (results.multiHandLandmarks.length === 2) {
-                const h1 = results.multiHandLandmarks[0];
-                const h2 = results.multiHandLandmarks[1];
+                const h1 = results.multiHandLandmarks[0]; const h2 = results.multiHandLandmarks[1];
                 const dist = Math.sqrt(Math.pow(h1[0].x - h2[0].x, 2) + Math.pow(h1[0].y - h2[0].y, 2));
-                if (dist < 0.25) { 
-                    gesture = "PRAY";
-                }
+                if (dist < 0.25) gesture = "PRAY";
             }
-            
             if (gesture !== "PRAY") {
                 const landmarks = results.multiHandLandmarks[0];
-                if ([4, 5, 6, 7].includes(STATE.stage)) {
-                    isSwipe = detectSwipe(landmarks);
-                }
-                
-                if (!isSwipe) {
-                    gesture = detectStaticGesture(landmarks);
-                } else {
-                    gesture = "SWIPE";
-                }
+                if ([4, 5, 6, 7].includes(STATE.stage)) isSwipe = detectSwipe(landmarks);
+                if (!isSwipe) gesture = detectStaticGesture(landmarks); else gesture = "SWIPE";
             }
         } else {
-            STATE.lastHandX = null;
-            document.getElementById('debug').innerText = `No Hands`;
+            STATE.lastHandX = null; document.getElementById('debug').innerText = `No Hands`;
         }
-
         handleGameLogic(gesture);
     }
 
     function detectSwipe(lm) {
-        const currX = lm[9].x; 
-        const currTime = Date.now();
-        let detected = false;
-
+        const currX = lm[9].x; const currTime = Date.now(); let detected = false;
         if (STATE.lastHandX !== null) {
-            const deltaX = currX - STATE.lastHandX;
-            const deltaTime = currTime - STATE.lastHandTime;
-            
+            const deltaX = currX - STATE.lastHandX; const deltaTime = currTime - STATE.lastHandTime;
             if (Math.abs(deltaX) > CONFIG.swipeThreshold && deltaTime < 300) {
-                if (currTime - STATE.swipeCooldown > 800) {
-                    detected = true;
-                    STATE.swipeCooldown = currTime;
-                }
+                if (currTime - STATE.swipeCooldown > 800) { detected = true; STATE.swipeCooldown = currTime; }
             }
         }
-
-        if (detected || (Date.now() - STATE.lastHandTime > 200)) {
-             STATE.lastHandX = currX;
-             STATE.lastHandTime = currTime;
-        }
-        
+        if (detected || (Date.now() - STATE.lastHandTime > 200)) { STATE.lastHandX = currX; STATE.lastHandTime = currTime; }
         return detected;
     }
 
     function detectStaticGesture(lm) {
         const isExtended = (tip, pip) => lm[tip].y < lm[pip].y;
-        const indexOut = isExtended(8, 6);
-        const midOut = isExtended(12, 10);
-        const ringOut = isExtended(16, 14);
-        const pinkyOut = isExtended(20, 18);
-        // 放宽判定，不再强制 thumbOut
-        
-        // 3: Index, Mid, Ring
+        const thumbOut = lm[4].x < lm[3].x; const indexOut = isExtended(8, 6); const midOut = isExtended(12, 10);
+        const ringOut = isExtended(16, 14); const pinkyOut = isExtended(20, 18);
         if (indexOut && midOut && ringOut && !pinkyOut) return "THREE"; 
-        // 2: Index, Mid
         if (indexOut && midOut && !ringOut && !pinkyOut) return "VICTORY"; 
-        // 1: Index
         if (indexOut && !midOut && !ringOut && !pinkyOut) return "ONE";
-        
         const pinchDist = Math.sqrt(Math.pow(lm[4].x - lm[8].x, 2) + Math.pow(lm[4].y - lm[8].y, 2));
         if (pinchDist < 0.1) return "PINCH";
-        
-        // Palm: At least 4 fingers
         const openFingers = [indexOut, midOut, ringOut, pinkyOut].filter(Boolean).length;
         if (openFingers >= 3) return "PALM";
-
         return "NONE";
     }
 
-    // Helper: 触发箭头心形 (用于手势成功或超时)
     function triggerArrowHeart() {
         if (STATE.arrowHeartTimer) clearTimeout(STATE.arrowHeartTimer);
         updateStatus("💘 收到爱心！请挥手继续");
@@ -800,201 +607,132 @@
         STATE.lastActionTime = Date.now();
     }
 
-    // 执行许愿成功后的逻辑
     function triggerFinalMoment() {
         if (STATE.cakeTimer) clearTimeout(STATE.cakeTimer);
-        
         updateStatus("✨ 愿望已收到 ✨");
         triggerConfetti();
-        
-        setTimeout(() => {
-            morphTo(STATE.textParticles["FINAL"]);
-            STATE.stage = 9;
-        }, 1500);
-        
+        setTimeout(() => { morphTo(STATE.textParticles["FINAL"]); STATE.stage = 9; }, 1500);
         STATE.lastActionTime = Date.now() + 5000; 
     }
 
     function handleGameLogic(gesture) {
         const now = Date.now();
-        
-        // 动态冷却时间
         let cooldown = 2000;
-        if (STATE.stage === 4) cooldown = 3000; // 那五句文案之间增加到 3 秒
-        if (STATE.stage === 8) cooldown = 4000; // 蛋糕许愿：防误触，强制等待4秒
+        if (STATE.stage === 4) cooldown = 3000; 
+        if (STATE.stage === 8) cooldown = 4000; 
         
         if (now - STATE.lastActionTime < cooldown) return; 
-
         if (gesture !== "SWIPE") {
-             if (gesture === STATE.lastGesture && gesture !== "NONE") {
-                STATE.gestureBuffer++;
-            } else {
-                STATE.gestureBuffer = 0;
-                STATE.lastGesture = gesture;
-            }
-            if (STATE.gestureBuffer < 5) return; 
+             if (gesture === STATE.lastGesture && gesture !== "NONE") { STATE.gestureBuffer++; } 
+             else { STATE.gestureBuffer = 0; STATE.lastGesture = gesture; }
+             if (STATE.gestureBuffer < 5) return; 
         }
 
         switch(STATE.stage) {
-            case 0: // 等待3
+            case 0: 
                 if (gesture === "THREE") {
-                    updateStatus("很好！接下来比出数字 '2'");
-                    showGestureIcon("3");
-                    morphTo(STATE.textParticles["3"]); 
-                    STATE.stage = 1;
-                    STATE.gestureBuffer = 0;
-                    STATE.lastActionTime = now;
+                    updateStatus("很好！接下来比出数字 '2'"); showGestureIcon("3"); morphTo(STATE.textParticles["3"]); 
+                    STATE.stage = 1; STATE.gestureBuffer = 0; STATE.lastActionTime = now;
                 }
                 break;
-            case 1: // 等待2
+            case 1: 
                 if (gesture === "VICTORY") {
-                    updateStatus("最后，比出数字 '1'");
-                    showGestureIcon("2");
-                    morphTo(STATE.textParticles["2"]); 
-                    STATE.stage = 2;
-                    STATE.gestureBuffer = 0;
-                    STATE.lastActionTime = now;
+                    updateStatus("最后，比出数字 '1'"); showGestureIcon("2"); morphTo(STATE.textParticles["2"]); 
+                    STATE.stage = 2; STATE.gestureBuffer = 0; STATE.lastActionTime = now;
                 }
                 break;
-            case 2: // 等待1
+            case 2: 
                 if (gesture === "ONE") {
-                    updateStatus("即将开始...");
-                    showGestureIcon("1");
-                    morphTo(STATE.textParticles["1"]); 
-                    STATE.stage = 3;
-                    STATE.gestureBuffer = 0;
-                    STATE.lastActionTime = now;
-                    
-                    // 延时提示下一步操作
-                    setTimeout(() => {
-                         updateStatus("👉 请挥手或划过屏幕，听我说...");
-                         showGestureIcon("👋");
-                    }, 2000);
+                    updateStatus("即将开始..."); showGestureIcon("1"); morphTo(STATE.textParticles["1"]); 
+                    STATE.stage = 3; STATE.gestureBuffer = 0; STATE.lastActionTime = now;
+                    setTimeout(() => { updateStatus("👉 请挥手或划过屏幕，听我说..."); showGestureIcon("👋"); }, 2000);
                 }
                 break;
-            case 3: // 开启文案
+            case 3: 
                 if (gesture === "PALM" || gesture === "SWIPE") {
-                    STATE.messageIndex = 0;
-                    updateStatus("✨ 挥手或划过屏幕翻页");
-                    updateSubStatus(`1 / ${CONFIG.messages.length}`);
-                    showGestureIcon("👋");
-                    morphTo(STATE.textParticles[`MSG_0`]);
-                    STATE.stage = 4;
-                    STATE.lastActionTime = now;
+                    STATE.messageIndex = 0; updateStatus("✨ 挥手或划过屏幕翻页"); updateSubStatus(`1 / ${CONFIG.messages.length}`);
+                    showGestureIcon("👋"); morphTo(STATE.textParticles[`MSG_0`]); STATE.stage = 4; STATE.lastActionTime = now;
                 }
                 break;
-            case 4: // 文案切换 (0-4)
+            case 4: 
                 if (gesture === "SWIPE" || gesture === "PALM") {
                     STATE.messageIndex++;
-                    
                     if (STATE.messageIndex < CONFIG.messages.length) {
-                        morphTo(STATE.textParticles[`MSG_${STATE.messageIndex}`]);
-                        showGestureIcon("➡");
-                        updateSubStatus(`${STATE.messageIndex + 1} / ${CONFIG.messages.length}`);
+                        morphTo(STATE.textParticles[`MSG_${STATE.messageIndex}`]); showGestureIcon("➡"); updateSubStatus(`${STATE.messageIndex + 1} / ${CONFIG.messages.length}`);
                     } else {
-                        updateStatus("🎉 生日快乐！请比个心 ❤");
-                        updateSubStatus("");
-                        morphTo(STATE.textParticles["HB"]);
-                        STATE.stage = 5;
-                        
-                        // 启动“一箭穿心”自动保底倒计时
+                        updateStatus("🎉 生日快乐！请比个心 ❤"); updateSubStatus(""); morphTo(STATE.textParticles["HB"]); STATE.stage = 5;
                         if (STATE.arrowHeartTimer) clearTimeout(STATE.arrowHeartTimer);
-                        STATE.arrowHeartTimer = setTimeout(() => {
-                            if (STATE.stage === 5) {
-                                triggerArrowHeart();
-                            }
-                        }, 6000); 
+                        STATE.arrowHeartTimer = setTimeout(() => { if (STATE.stage === 5) triggerArrowHeart(); }, 6000); 
                     }
                     STATE.lastActionTime = now;
                 }
                 break;
-            case 5: // HB -> Arrow Heart
-                if (gesture === "PINCH") {
-                    triggerArrowHeart();
-                }
+            case 5: 
+                if (gesture === "PINCH") triggerArrowHeart();
                 break;
-            case 6: // Arrow Heart -> Love You
+            case 6: 
                 if (gesture === "SWIPE" || gesture === "PALM") {
-                    updateStatus("❤️ 挥手许愿");
-                    morphTo(STATE.textParticles["LOVE"]);
-                    STATE.stage = 7;
-                    STATE.lastActionTime = now;
+                    updateStatus("❤️ 挥手许愿"); morphTo(STATE.textParticles["LOVE"]); STATE.stage = 7; STATE.lastActionTime = now;
                 }
                 break;
-            case 7: // Love -> Cake
+            case 7: 
                 if (gesture === "SWIPE" || gesture === "PALM") {
-                    updateStatus("🎂 请双手合十许愿");
-                    showGestureIcon("🙏");
-                    generateCakeShape();
-                    STATE.stage = 8;
-                    STATE.lastActionTime = now;
-                    
-                    // 启动自动许愿倒计时
-                    STATE.cakeTimer = setTimeout(() => {
-                        if (STATE.stage === 8) { 
-                            triggerFinalMoment();
-                        }
-                    }, 8000); 
+                    updateStatus("🎂 请双手合十许愿"); showGestureIcon("🙏"); generateCakeShape(); STATE.stage = 8; STATE.lastActionTime = now;
+                    STATE.cakeTimer = setTimeout(() => { if (STATE.stage === 8) triggerFinalMoment(); }, 8000); 
                 }
                 break;
-            case 8: // Cake -> Final
-                if (gesture === "PRAY") {
-                    showGestureIcon("🙏");
-                    triggerFinalMoment();
-                }
+            case 8: 
+                if (gesture === "PRAY") { showGestureIcon("🙏"); triggerFinalMoment(); }
                 break;
         }
     }
 
     function updateStatus(text) {
-        const el = document.getElementById('status-text');
-        el.style.opacity = 0;
-        setTimeout(() => {
-            el.innerText = text;
-            el.style.opacity = 1;
-        }, 300);
+        const el = document.getElementById('status-text'); el.style.opacity = 0;
+        setTimeout(() => { el.innerText = text; el.style.opacity = 1; }, 300);
     }
-
     function updateSubStatus(text) {
-        const el = document.getElementById('sub-status');
-        if(!text) {
-            el.style.opacity = 0;
-        } else {
-            el.innerText = text;
-            el.style.opacity = 1;
-        }
+        const el = document.getElementById('sub-status'); if(!text) el.style.opacity = 0; else { el.innerText = text; el.style.opacity = 1; }
     }
-    
     function showGestureIcon(icon) {
-        const el = document.getElementById('gesture-icon');
-        el.innerText = icon;
-        el.style.opacity = 1;
-        el.style.transform = "translate(-50%, -50%) scale(1.5)";
-        
-        setTimeout(() => {
-            el.style.opacity = 0;
-            el.style.transform = "translate(-50%, -50%) scale(1)";
-        }, 1000);
+        const el = document.getElementById('gesture-icon'); el.innerText = icon; el.style.opacity = 1; el.style.transform = "translate(-50%, -50%) scale(1.5)";
+        setTimeout(() => { el.style.opacity = 0; el.style.transform = "translate(-50%, -50%) scale(1)"; }, 1000);
     }
-    
     function onWindowResize() {
-        camera.aspect = window.innerWidth / window.innerHeight;
-        camera.updateProjectionMatrix();
-        renderer.setSize(window.innerWidth, window.innerHeight);
+        camera.aspect = window.innerWidth / window.innerHeight; camera.updateProjectionMatrix(); renderer.setSize(window.innerWidth, window.innerHeight);
     }
-
     function toggleFullScreen() {
-        if (!document.fullscreenElement) {
-            document.documentElement.requestFullscreen();
-        } else {
-            if (document.exitFullscreen) {
-                document.exitFullscreen();
-            }
-        }
+        if (!document.fullscreenElement) document.documentElement.requestFullscreen(); else if (document.exitFullscreen) document.exitFullscreen();
     }
 
     init();
-
 </script>
 </body>
 </html>
+```
+
+### 部署到 VPS 的步骤
+
+1.  **准备文件**：
+    * 在本地新建文件夹 `birthday_project`。
+    * 将上述代码保存为 `index.html`。
+    * 将下载的音乐文件命名为 `River Flows in You.mp3`（注意空格），放入同一文件夹。
+
+2.  **上传服务器**：
+    * 使用 SSH 连接到 VPS。
+    * 创建目录：`sudo mkdir -p /var/www/birthday`
+    * 使用 SFTP/FileZilla 将 `birthday_project` 内的两个文件上传到 `/var/www/birthday`。
+
+3.  **Nginx 配置 (如果已有 Nginx)**：
+    * 编辑配置：`sudo nano /etc/nginx/sites-available/birthday`
+    * 内容示例：
+        ```nginx
+        server {
+            listen 80;
+            server_name 你的域名.com;
+            root /var/www/birthday;
+            index index.html;
+            location / {
+                try_files $uri $uri/ =404;
+            }
+        }
